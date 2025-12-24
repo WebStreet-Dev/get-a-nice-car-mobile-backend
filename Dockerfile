@@ -44,16 +44,8 @@ COPY --from=builder /app/package.json ./package.json
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
-USER nodejs
 
-# Expose port
-EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
-
-# Create startup script
+# Create startup script (before switching user)
 RUN echo '#!/bin/sh\n\
 set -e\n\
 echo "Waiting for database to be ready..."\n\
@@ -62,7 +54,20 @@ echo "Running database migrations..."\n\
 npx prisma migrate deploy 2>/dev/null || npx prisma db push --accept-data-loss || echo "Database setup completed"\n\
 echo "Starting application..."\n\
 exec node dist/app.js\n\
-' > /app/start.sh && chmod +x /app/start.sh
+' > /app/start.sh && chmod +x /app/start.sh && chown nodejs:nodejs /app/start.sh
+
+# Change ownership of app directory to nodejs user
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 # Start the server
 CMD ["/app/start.sh"]
