@@ -67,11 +67,13 @@ app.use(errorHandler);
 
 // Start server
 const PORT = config.port;
+const HOST = process.env.HOST || '0.0.0.0';
 
-app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`, {
+app.listen(PORT, HOST, () => {
+  logger.info(`Server is running on ${HOST}:${PORT}`, {
     environment: config.nodeEnv,
     port: PORT,
+    host: HOST,
   });
 });
 

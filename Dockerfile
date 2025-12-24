@@ -60,18 +60,25 @@ echo "Starting application..."
 exec node dist/app.js
 EOF
 
+# Create healthcheck script that uses PORT env var
+RUN cat > /app/healthcheck.sh << 'EOF' && chmod +x /app/healthcheck.sh
+#!/bin/sh
+PORT=${PORT:-3000}
+wget --no-verbose --tries=1 --spider http://localhost:${PORT}/health || exit 1
+EOF
+
 # Change ownership of app directory to nodejs user
 RUN chown -R nodejs:nodejs /app
 
 # Switch to non-root user
 USER nodejs
 
-# Expose port
-EXPOSE 3000
+# Expose port (use PORT env var or default to 3000)
+EXPOSE ${PORT:-3000}
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+# Health check - use script that reads PORT env var
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD /app/healthcheck.sh
 
 # Start the server
 CMD ["/app/start.sh"]
