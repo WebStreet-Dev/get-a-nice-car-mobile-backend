@@ -117,7 +117,7 @@ export class NotificationService {
         title: data.title,
         message: data.message,
         type: data.type,
-        data: data.data || {},
+        data: (data.data || {}) as any,
       },
     });
 
@@ -274,6 +274,7 @@ export class NotificationService {
 
 export const notificationService = new NotificationService();
 export default notificationService;
+
 
 
 
