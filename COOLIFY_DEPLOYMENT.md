@@ -2,20 +2,32 @@
 
 ## Build Pack Selection
 
-**Use: Docker Compose** (recommended for deploying database on the same server)
+**Option 1: Docker Compose** (recommended if deploying database on the same server)
+- Use this if you want Coolify to manage the database container
+
+**Option 2: Dockerfile** (use this if database is hosted separately in Coolify)
+- Use this if you already have a database resource created separately in Coolify
+- You MUST set `DATABASE_URL` environment variable pointing to your database
 
 ## Required Environment Variables
 
 Set these in Coolify's **Environment Variables** section:
 
-### Database Configuration (Required)
+### Database Configuration
+
+**If using Docker Compose build pack:**
 ```env
 DB_USER=nicecar_user
 DB_PASSWORD=your_secure_password_here
 DB_NAME=nicecar_db
 ```
+**Note:** `DATABASE_URL` is automatically constructed from the above variables in docker-compose.yml.
 
-**Note:** `DATABASE_URL` is automatically constructed from the above variables in docker-compose.yml. You don't need to set it manually.
+**If using Dockerfile build pack with external database:**
+```env
+DATABASE_URL=postgresql://nicecar_user:your_secure_password_here@voskwkwco0ksoscg40008ko4:5432/postgres?schema=public
+```
+**Important:** Replace `voskwkwco0ksoscg40008ko4` with your actual database container hostname from Coolify. You can find this in your database resource's "Postgres URL (internal)" field.
 
 ### JWT Secrets (Required)
 ```env
