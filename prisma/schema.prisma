@@ -1,1 +1,272 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AdminNotificationType {
+  BREAKDOWN
+  APPOINTMENT
+  USER_REGISTERED
+  GENERAL
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum FAQCategory {
+  SALES
+  SERVICE
+  GENERAL
+  ACCOUNTING
+}
+
+enum BreakdownLocationType {
+  CURRENT
+  LIVE
+}
+
+enum BreakdownStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum NotificationType {
+  APPOINTMENT
+  OFFER
+  PAYMENT
+  SERVICE
+  GENERAL
+  ACCOUNT_APPROVED
+  ACCOUNT_REJECTED
+  APPOINTMENT_APPROVED
+  APPOINTMENT_REJECTED
+}
+
+enum AccountStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  phone        String
+  passwordHash String        @map("password_hash")
+  role         Role          @default(USER)
+  fcmToken     String?       @map("fcm_token")
+  isActive     Boolean       @default(true) @map("is_active")
+  accountStatus AccountStatus @default(PENDING) @map("account_status")
+  rejectedReason String?     @map("rejected_reason")
+  approvedAt   DateTime?    @map("approved_at")
+  approvedBy   String?      @map("approved_by")
+  customRoleId String?       @map("custom_role_id")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  appointments       Appointment[]
+  breakdownRequests  BreakdownRequest[]
+  notifications      Notification[]
+  refreshTokens      RefreshToken[]
+  customRole         CustomRole?            @relation(fields: [customRoleId], references: [id])
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Department {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  phone       String
+  email       String
+  description String
+  icon        String
+  isActive    Boolean @default(true) @map("is_active")
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  // Relations
+  appointments Appointment[]
+
+  @@map("departments")
+}
+
+model Appointment {
+  id                String            @id @default(uuid())
+  userId            String            @map("user_id")
+  departmentId      String            @map("department_id")
+  dateTime          DateTime          @map("date_time")
+  vehicleOfInterest String?           @map("vehicle_of_interest")
+  notes             String?
+  status            AppointmentStatus @default(PENDING)
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  // Contact info (for guest bookings or different contact)
+  contactName  String? @map("contact_name")
+  contactEmail String? @map("contact_email")
+  contactPhone String? @map("contact_phone")
+
+  // Relations
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id])
+  reminders  AppointmentReminder[]
+
+  @@map("appointments")
+}
+
+model FAQ {
+  id          String      @id @default(uuid())
+  question    String
+  answer      String
+  category    FAQCategory
+  isPublished Boolean     @default(true) @map("is_published")
+  sortOrder   Int         @default(0) @map("sort_order")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@map("faqs")
+}
+
+model BreakdownRequest {
+  id                  String               @id @default(uuid())
+  userId              String               @map("user_id")
+  latitude            Float
+  longitude           Float
+  locationType        BreakdownLocationType @map("location_type")
+  liveDurationMinutes Int?                 @map("live_duration_minutes")
+  status              BreakdownStatus      @default(PENDING)
+  notes               String?
+  createdAt           DateTime             @default(now()) @map("created_at")
+  resolvedAt          DateTime?            @map("resolved_at")
+
+  // Relations
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locationUpdates BreakdownLocationUpdate[]
+
+  @@map("breakdown_requests")
+}
+
+model BreakdownLocationUpdate {
+  id                 String   @id @default(uuid())
+  breakdownRequestId String   @map("breakdown_request_id")
+  latitude           Float
+  longitude          Float
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  // Relations
+  breakdownRequest BreakdownRequest @relation(fields: [breakdownRequestId], references: [id], onDelete: Cascade)
+
+  @@map("breakdown_location_updates")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false) @map("is_read")
+  data      Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model DownpaymentCategory {
+  id          String   @id @default(uuid())
+  label       String   // e.g., "$1500 AND Under"
+  priceLimit  Int      @map("price_limit") // e.g., 1500
+  url         String   // External URL to inventory
+  color       String   // Hex color e.g., "#4CAF50"
+  icon        String   // Icon name
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("downpayment_categories")
+}
+
+model AdminNotification {
+  id        String                @id @default(uuid())
+  type      AdminNotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean               @default(false) @map("is_read")
+  createdAt DateTime              @default(now()) @map("created_at")
+
+  @@map("admin_notifications")
+}
+
+model CustomRole {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isSystemRole Boolean  @default(false) @map("is_system_role")
+  permissions Json     // Array of permission strings
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users User[]
+
+  @@map("roles")
+}
+
+model AppointmentReminder {
+  id            String     @id @default(uuid())
+  appointmentId String     @map("appointment_id")
+  reminderType  String     // "24h" or "1h"
+  sentAt        DateTime?  @map("sent_at")
+  scheduledFor  DateTime   @map("scheduled_for")
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  // Relations
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@map("appointment_reminders")
+}
+
+
+
 
