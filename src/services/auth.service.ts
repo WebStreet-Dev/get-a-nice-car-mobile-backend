@@ -240,13 +240,16 @@ export class AuthService {
    * Generate access and refresh tokens
    */
   private async generateTokens(payload: TokenPayload): Promise<AuthTokens> {
-    const accessToken = jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.accessExpiry as string,
-    });
+    const accessTokenOptions = {
+      expiresIn: config.jwt.accessExpiry,
+    } as jwt.SignOptions;
 
-    const refreshToken = jwt.sign(payload, config.jwt.refreshSecret, {
-      expiresIn: config.jwt.refreshExpiry as string,
-    });
+    const refreshTokenOptions = {
+      expiresIn: config.jwt.refreshExpiry,
+    } as jwt.SignOptions;
+
+    const accessToken = jwt.sign(payload, config.jwt.secret, accessTokenOptions);
+    const refreshToken = jwt.sign(payload, config.jwt.refreshSecret, refreshTokenOptions);
 
     return { accessToken, refreshToken };
   }
