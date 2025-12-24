@@ -73,8 +73,8 @@ RUN chown -R nodejs:nodejs /app
 # Switch to non-root user
 USER nodejs
 
-# Expose port (use PORT env var or default to 3000)
-EXPOSE ${PORT:-3000}
+# Expose port (standardized to 3000, but app will use PORT env var)
+EXPOSE 3000
 
 # Health check - use script that reads PORT env var
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
