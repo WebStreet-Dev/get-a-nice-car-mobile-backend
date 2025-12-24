@@ -38,6 +38,9 @@ COPY --from=builder /app/prisma ./prisma
 # Copy built files
 COPY --from=builder /app/dist ./dist
 
+# Copy seed file for post-deployment
+COPY --from=builder /app/prisma/seed.ts ./prisma/seed.ts
+
 # Copy package.json for prisma commands
 COPY --from=builder /app/package.json ./package.json
 
