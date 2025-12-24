@@ -41,20 +41,24 @@ COPY --from=builder /app/dist ./dist
 # Copy package.json for prisma commands
 COPY --from=builder /app/package.json ./package.json
 
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-# Create startup script (before switching user)
-RUN echo '#!/bin/sh\n\
-set -e\n\
-echo "Waiting for database to be ready..."\n\
-sleep 2\n\
-echo "Running database migrations..."\n\
-npx prisma migrate deploy 2>/dev/null || npx prisma db push --accept-data-loss || echo "Database setup completed"\n\
-echo "Starting application..."\n\
-exec node dist/app.js\n\
-' > /app/start.sh && chmod +x /app/start.sh && chown nodejs:nodejs /app/start.sh
+# Create startup script (before switching user) using heredoc
+RUN cat > /app/start.sh << 'EOF' && chmod +x /app/start.sh
+#!/bin/sh
+set -e
+echo "Waiting for database to be ready..."
+sleep 2
+echo "Running database migrations..."
+npx prisma migrate deploy 2>/dev/null || npx prisma db push --accept-data-loss || echo "Database setup completed"
+echo "Starting application..."
+exec node dist/app.js
+EOF
 
 # Change ownership of app directory to nodejs user
 RUN chown -R nodejs:nodejs /app
