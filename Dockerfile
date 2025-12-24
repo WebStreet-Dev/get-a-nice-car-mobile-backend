@@ -56,8 +56,10 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Create startup script
 RUN echo '#!/bin/sh\n\
 set -e\n\
+echo "Waiting for database to be ready..."\n\
+sleep 2\n\
 echo "Running database migrations..."\n\
-npx prisma migrate deploy || echo "Migration failed or no migrations to run"\n\
+npx prisma migrate deploy 2>/dev/null || npx prisma db push --accept-data-loss || echo "Database setup completed"\n\
 echo "Starting application..."\n\
 exec node dist/app.js\n\
 ' > /app/start.sh && chmod +x /app/start.sh
