@@ -32,10 +32,14 @@ RUN npm ci --only=production
 
 # Copy Prisma files
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 COPY --from=builder /app/prisma ./prisma
 
 # Copy built files
 COPY --from=builder /app/dist ./dist
+
+# Copy package.json for prisma commands
+COPY --from=builder /app/package.json ./package.json
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
@@ -49,8 +53,18 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
+# Create startup script
+RUN echo '#!/bin/sh\n\
+set -e\n\
+echo "Running database migrations..."\n\
+npx prisma migrate deploy || echo "Migration failed or no migrations to run"\n\
+echo "Starting application..."\n\
+exec node dist/app.js\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
 # Start the server
-CMD ["node", "dist/app.js"]
+CMD ["/app/start.sh"]
+
 
 
 
