@@ -241,11 +241,11 @@ export class AuthService {
    */
   private async generateTokens(payload: TokenPayload): Promise<AuthTokens> {
     const accessToken = jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.accessExpiry,
+      expiresIn: config.jwt.accessExpiry as string,
     });
 
     const refreshToken = jwt.sign(payload, config.jwt.refreshSecret, {
-      expiresIn: config.jwt.refreshExpiry,
+      expiresIn: config.jwt.refreshExpiry as string,
     });
 
     return { accessToken, refreshToken };
