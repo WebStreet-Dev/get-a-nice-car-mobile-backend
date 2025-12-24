@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+admin/node_modules/
+
+# Build output
+dist/
+admin/dist/
+
+# Environment files
+.env
+.env.production
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal

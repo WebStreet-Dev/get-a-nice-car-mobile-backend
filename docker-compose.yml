@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: nicecar_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-nicecar_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-nicecar_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-nicecar_user} -d ${DB_NAME:-nicecar_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nicecar_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: nicecar_redis_prod
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nicecar_network
+
+  # Node.js API Server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nicecar_api_prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${DB_USER:-nicecar_user}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-nicecar_db}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nicecar_network
+    ports:
+      - "3000:3000"
+
+  # Admin Panel (built React app served by nginx)
+  admin:
+    image: nginx:alpine
+    container_name: nicecar_admin_prod
+    restart: always
+    volumes:
+      - ./admin/dist:/usr/share/nginx/html:ro
+      - ./nginx/admin.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - nicecar_network
+    ports:
+      - "3001:80"
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  nicecar_network:
+    driver: bridge
+
+
+
