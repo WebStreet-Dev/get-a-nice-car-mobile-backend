@@ -2,9 +2,15 @@
 
 This guide explains how to run the database seed script both locally and on the server.
 
+## Important: Production Seed Fix
+
+⚠️ **Production Note**: The seed script uses **JavaScript** (`prisma/seed.js`) for production compatibility. The TypeScript version (`prisma/seed.ts`) is available for local development, but production containers use `node prisma/seed.js` which doesn't require `tsx` (a devDependency).
+
+This ensures the seed script works in production environments where devDependencies are not installed.
+
 ## What Does the Seed Script Do?
 
-The seed script (`prisma/seed.ts`) creates initial data for the application:
+The seed script (`prisma/seed.js` for production, `prisma/seed.ts` for local dev) creates initial data for the application:
 
 - **Users**: Super Admin, Admin, and Test User accounts
 - **Departments**: Sales, Service, Accounting, and General
@@ -52,11 +58,15 @@ npm run db:seed
 npx prisma db seed
 ```
 
-### Method 3: Direct execution with tsx
+This uses the JavaScript version (`seed.js`) configured in `package.json`, which works in both development and production.
+
+### Method 3: Direct execution (Local development with TypeScript)
 
 ```bash
 npx tsx prisma/seed.ts
 ```
+
+**Note**: This requires `tsx` (devDependency) and only works locally. For production, use Method 1 or 2.
 
 ### Environment Variables (Optional)
 
