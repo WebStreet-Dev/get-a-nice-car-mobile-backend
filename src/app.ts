@@ -69,6 +69,12 @@ app.use(errorHandler);
 const PORT = config.port;
 const HOST = process.env.HOST || '0.0.0.0';
 
+// #region agent log
+const dbUrlAtStartup = process.env.DATABASE_URL || '';
+const dbUrlMaskedStartup = dbUrlAtStartup ? dbUrlAtStartup.replace(/:([^:@]+)@/, ':****@') : 'EMPTY';
+fetch('http://127.0.0.1:7242/ingest/fb0ff7d9-eaac-4432-9ff3-49e4f0e88573',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app.ts:72',message:'Server startup - DATABASE_URL check',data:{urlMasked:dbUrlMaskedStartup,urlLength:dbUrlAtStartup.length,configDbUrl:config.databaseUrl?.substring(0,30)+'...'||'EMPTY'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
+
 app.listen(PORT, HOST, () => {
   logger.info(`Server is running on ${HOST}:${PORT}`, {
     environment: config.nodeEnv,

@@ -8,10 +8,24 @@ export class DepartmentService {
    * Get all active departments
    */
   async getAllDepartments(): Promise<Department[]> {
-    return prisma.department.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: 'asc' },
-    });
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/fb0ff7d9-eaac-4432-9ff3-49e4f0e88573',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'department.service.ts:11',message:'Before database query',data:{prismaExists:!!prisma,queryType:'findMany'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    try {
+      const result = await prisma.department.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: 'asc' },
+      });
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/fb0ff7d9-eaac-4432-9ff3-49e4f0e88573',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'department.service.ts:16',message:'Database query succeeded',data:{resultCount:result.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      return result;
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/fb0ff7d9-eaac-4432-9ff3-49e4f0e88573',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'department.service.ts:21',message:'Database query failed',data:{errorMessage:error?.message,errorCode:error?.code,errorName:error?.name,hasCredentials:error?.message?.includes('credentials')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      throw error;
+    }
   }
 
   /**
@@ -122,6 +136,8 @@ export class DepartmentService {
 
 export const departmentService = new DepartmentService();
 export default departmentService;
+
+
 
 
 

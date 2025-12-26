@@ -2,6 +2,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// #region agent log
+const dbUrlRaw = process.env.DATABASE_URL || '';
+const dbUrlMasked = dbUrlRaw ? dbUrlRaw.replace(/:([^:@]+)@/, ':****@') : 'EMPTY';
+fetch('http://127.0.0.1:7242/ingest/fb0ff7d9-eaac-4432-9ff3-49e4f0e88573',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config/index.ts:6',message:'DATABASE_URL from env after dotenv',data:{urlMasked:dbUrlMasked,urlLength:dbUrlRaw.length,urlExists:!!dbUrlRaw,hasPostgres:dbUrlRaw.includes('postgres'),hasPassword:dbUrlRaw.includes('@')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
+
 export const config = {
   // Server
   port: parseInt(process.env.PORT || '3000', 10),
@@ -48,6 +54,8 @@ export const config = {
 };
 
 export default config;
+
+
 
 
 
