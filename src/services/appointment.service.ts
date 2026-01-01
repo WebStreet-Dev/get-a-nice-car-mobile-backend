@@ -1,43 +1,56 @@
-import { Appointment, AppointmentStatus } from '@prisma/client';
+import { Appointment, AppointmentStatus, NotificationType } from '@prisma/client';
 import prisma from './prisma.service.js';
-import { NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
+import { NotFoundError, ForbiddenError, AppError } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
-import { CreateAppointmentInput, UpdateAppointmentInput, AppointmentQueryInput } from '../validators/appointment.validator.js';
+import adminNotificationService from './admin-notification.service.js';
+import notificationService from './notification.service.js';
+import vcitaService from './vcita.service.js';
+import appointmentReminderService from './appointment-reminder.service.js';
 
 export class AppointmentService {
   /**
    * Create a new appointment
+   * For Sales department, returns null (client should redirect to vCita)
+   * For other departments, creates appointment with PENDING status
    */
   async createAppointment(
     userId: string,
-    data: CreateAppointmentInput
-  ): Promise<Appointment> {
+    data: {
+      departmentId: string;
+      dateTime: string;
+      vehicleOfInterest?: string;
+      notes?: string;
+      contactName?: string;
+      contactEmail?: string;
+      contactPhone?: string;
+    }
+  ): Promise<Appointment | null> {
     // Verify department exists
     const department = await prisma.department.findUnique({
       where: { id: data.departmentId },
     });
 
-    if (!department) {
+    if (!department || !department.isActive) {
       throw new NotFoundError('Department');
     }
 
-    if (!department.isActive) {
-      throw new ForbiddenError('Department is not active');
+    // Check if Sales department - return null (client should redirect to vCita)
+    if (vcitaService.isSalesDepartment(department.name)) {
+      logger.info('Sales appointment - redirecting to vCita', { userId, departmentId: data.departmentId });
+      return null; // Signal to client to redirect to vCita
     }
 
-    // Parse dateTime
-    const dateTime = new Date(data.dateTime);
-
-    // Check if date is in the past
-    if (dateTime < new Date()) {
-      throw new ForbiddenError('Cannot create appointment in the past');
+    // Validate date is in the future
+    const appointmentDate = new Date(data.dateTime);
+    if (appointmentDate <= new Date()) {
+      throw new AppError('Appointment date must be in the future');
     }
 
     const appointment = await prisma.appointment.create({
       data: {
         userId,
         departmentId: data.departmentId,
-        dateTime,
+        dateTime: appointmentDate,
         vehicleOfInterest: data.vehicleOfInterest,
         notes: data.notes,
         contactName: data.contactName,
@@ -48,32 +61,45 @@ export class AppointmentService {
       include: {
         department: true,
         user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          },
+          select: { name: true },
         },
       },
     });
 
     logger.info('Appointment created', { appointmentId: appointment.id, userId });
 
+    // Send notification to admins
+    adminNotificationService.notifyAppointmentCreated({
+      appointmentId: appointment.id,
+      userName: appointment.user.name,
+      departmentName: appointment.department.name,
+      dateTime: appointmentDate,
+    }).catch((err) => {
+      logger.error('Failed to send appointment notification', { error: err });
+    });
+
+    // Schedule reminders (will be sent when appointment is approved)
+    // Reminders are scheduled when appointment status changes to CONFIRMED
+
     return appointment;
   }
 
   /**
-   * Get user's appointments with pagination and filters
+   * Get appointments for a user
    */
   async getUserAppointments(
     userId: string,
-    query: AppointmentQueryInput
+    options: {
+      page: number;
+      limit: number;
+      status?: AppointmentStatus;
+      departmentId?: string;
+    }
   ): Promise<{ appointments: Appointment[]; total: number }> {
-    const { page = 1, limit = 10, status, departmentId } = query;
+    const { page, limit, status, departmentId } = options;
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const where = {
       userId,
       ...(status && { status }),
       ...(departmentId && { departmentId }),
@@ -84,7 +110,7 @@ export class AppointmentService {
         where,
         skip,
         take: limit,
-        orderBy: { dateTime: 'desc' },
+        orderBy: { dateTime: 'asc' },
         include: {
           department: true,
         },
@@ -96,7 +122,7 @@ export class AppointmentService {
   }
 
   /**
-   * Get appointment by ID
+   * Get a single appointment by ID
    */
   async getAppointmentById(
     appointmentId: string,
@@ -121,6 +147,7 @@ export class AppointmentService {
       throw new NotFoundError('Appointment');
     }
 
+    // Check if user owns this appointment
     if (appointment.userId !== userId) {
       throw new ForbiddenError('You do not have access to this appointment');
     }
@@ -134,106 +161,185 @@ export class AppointmentService {
   async updateAppointment(
     appointmentId: string,
     userId: string,
-    data: UpdateAppointmentInput
+    data: {
+      departmentId?: string;
+      dateTime?: string;
+      vehicleOfInterest?: string | null;
+      notes?: string | null;
+      contactName?: string | null;
+      contactEmail?: string | null;
+      contactPhone?: string | null;
+    }
   ): Promise<Appointment> {
-    const appointment = await prisma.appointment.findUnique({
+    // Get existing appointment
+    const existing = await prisma.appointment.findUnique({
       where: { id: appointmentId },
     });
 
-    if (!appointment) {
+    if (!existing) {
       throw new NotFoundError('Appointment');
     }
 
-    if (appointment.userId !== userId) {
+    // Check if user owns this appointment
+    if (existing.userId !== userId) {
       throw new ForbiddenError('You do not have access to this appointment');
     }
 
-    if (appointment.status === AppointmentStatus.COMPLETED) {
-      throw new ForbiddenError('Cannot update a completed appointment');
+    // Cannot update cancelled or completed appointments
+    if (existing.status === AppointmentStatus.CANCELLED || existing.status === AppointmentStatus.COMPLETED) {
+      throw new AppError('Cannot update cancelled or completed appointments');
     }
 
-    if (appointment.status === AppointmentStatus.CANCELLED) {
-      throw new ForbiddenError('Cannot update a cancelled appointment');
-    }
-
-    // If department is being updated, verify it exists
+    // Verify department if being updated
     if (data.departmentId) {
       const department = await prisma.department.findUnique({
         where: { id: data.departmentId },
       });
 
-      if (!department) {
+      if (!department || !department.isActive) {
         throw new NotFoundError('Department');
       }
-
-      if (!department.isActive) {
-        throw new ForbiddenError('Department is not active');
-      }
     }
 
-    // Parse dateTime if provided
-    const updateData: any = { ...data };
+    // Validate date if being updated
     if (data.dateTime) {
-      const dateTime = new Date(data.dateTime);
-      if (dateTime < new Date()) {
-        throw new ForbiddenError('Cannot update appointment to a past date');
+      const appointmentDate = new Date(data.dateTime);
+      if (appointmentDate <= new Date()) {
+        throw new AppError('Appointment date must be in the future');
       }
-      updateData.dateTime = dateTime;
     }
 
-    const updatedAppointment = await prisma.appointment.update({
+    const appointment = await prisma.appointment.update({
       where: { id: appointmentId },
-      data: updateData,
+      data: {
+        ...(data.departmentId && { departmentId: data.departmentId }),
+        ...(data.dateTime && { dateTime: new Date(data.dateTime) }),
+        ...(data.vehicleOfInterest !== undefined && { vehicleOfInterest: data.vehicleOfInterest }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.contactName !== undefined && { contactName: data.contactName }),
+        ...(data.contactEmail !== undefined && { contactEmail: data.contactEmail }),
+        ...(data.contactPhone !== undefined && { contactPhone: data.contactPhone }),
+      },
       include: {
         department: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          },
-        },
       },
     });
 
     logger.info('Appointment updated', { appointmentId, userId });
 
-    return updatedAppointment;
+    return appointment;
   }
 
   /**
    * Cancel an appointment
    */
-  async cancelAppointment(
-    appointmentId: string,
-    userId: string
-  ): Promise<Appointment> {
-    const appointment = await prisma.appointment.findUnique({
+  async cancelAppointment(appointmentId: string, userId: string): Promise<Appointment> {
+    const existing = await prisma.appointment.findUnique({
       where: { id: appointmentId },
     });
 
-    if (!appointment) {
+    if (!existing) {
       throw new NotFoundError('Appointment');
     }
 
-    if (appointment.userId !== userId) {
+    // Check if user owns this appointment
+    if (existing.userId !== userId) {
       throw new ForbiddenError('You do not have access to this appointment');
     }
 
-    if (appointment.status === AppointmentStatus.CANCELLED) {
-      throw new ForbiddenError('Appointment is already cancelled');
+    // Cannot cancel already cancelled or completed appointments
+    if (existing.status === AppointmentStatus.CANCELLED) {
+      throw new AppError('Appointment is already cancelled');
     }
 
-    if (appointment.status === AppointmentStatus.COMPLETED) {
-      throw new ForbiddenError('Cannot cancel a completed appointment');
+    if (existing.status === AppointmentStatus.COMPLETED) {
+      throw new AppError('Cannot cancel a completed appointment');
     }
 
-    const cancelledAppointment = await prisma.appointment.update({
+    const appointment = await prisma.appointment.update({
       where: { id: appointmentId },
-      data: {
-        status: AppointmentStatus.CANCELLED,
+      data: { status: AppointmentStatus.CANCELLED },
+      include: {
+        department: true,
       },
+    });
+
+    logger.info('Appointment cancelled', { appointmentId, userId });
+
+    return appointment;
+  }
+
+  /**
+   * Get all appointments (admin only)
+   */
+  async getAllAppointments(options: {
+    page: number;
+    limit: number;
+    status?: AppointmentStatus;
+    departmentId?: string;
+    userId?: string;
+  }): Promise<{ appointments: Appointment[]; total: number }> {
+    const { page, limit, status, departmentId, userId } = options;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      ...(status && { status }),
+      ...(departmentId && { departmentId }),
+      ...(userId && { userId }),
+    };
+
+    const [appointments, total] = await Promise.all([
+      prisma.appointment.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { dateTime: 'desc' },
+        include: {
+          department: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+        },
+      }),
+      prisma.appointment.count({ where }),
+    ]);
+
+    return { appointments, total };
+  }
+
+  /**
+   * Update appointment status (admin only)
+   */
+  async updateAppointmentStatus(
+    appointmentId: string,
+    status: AppointmentStatus
+  ): Promise<Appointment> {
+    const existing = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        department: true,
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Appointment');
+    }
+
+    const appointment = await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { status },
       include: {
         department: true,
         user: {
@@ -247,11 +353,65 @@ export class AppointmentService {
       },
     });
 
-    logger.info('Appointment cancelled', { appointmentId, userId });
+    logger.info('Appointment status updated', { appointmentId, status });
 
-    return cancelledAppointment;
+    // Send notification to user when appointment is approved or rejected
+    if (status === AppointmentStatus.CONFIRMED) {
+      await notificationService.createNotification({
+        userId: appointment.userId,
+        title: 'Appointment Approved',
+        message: `Your appointment with ${appointment.department.name} on ${new Date(appointment.dateTime).toLocaleDateString()} has been approved.`,
+        type: NotificationType.APPOINTMENT_APPROVED,
+        data: {
+          appointmentId: appointment.id,
+          departmentName: appointment.department.name,
+          dateTime: appointment.dateTime.toISOString(),
+        },
+      }).catch((err) => {
+        logger.error('Failed to send appointment approval notification', { error: err });
+      });
+
+      // Schedule reminders for confirmed appointment
+      await appointmentReminderService.scheduleReminders(appointment.id, appointment.dateTime).catch((err) => {
+        logger.error('Failed to schedule reminders', { appointmentId: appointment.id, error: err });
+      });
+    } else if (status === AppointmentStatus.CANCELLED && existing.status === AppointmentStatus.PENDING) {
+      // Only send rejection notification if it was pending
+      await notificationService.createNotification({
+        userId: appointment.userId,
+        title: 'Appointment Rejected',
+        message: `Your appointment with ${appointment.department.name} has been cancelled.`,
+        type: NotificationType.APPOINTMENT_REJECTED,
+        data: {
+          appointmentId: appointment.id,
+          departmentName: appointment.department.name,
+        },
+      }).catch((err) => {
+        logger.error('Failed to send appointment rejection notification', { error: err });
+      });
+    }
+
+    return appointment;
+  }
+
+  /**
+   * Approve appointment (admin only)
+   */
+  async approveAppointment(appointmentId: string): Promise<Appointment> {
+    return this.updateAppointmentStatus(appointmentId, AppointmentStatus.CONFIRMED);
+  }
+
+  /**
+   * Reject appointment (admin only)
+   */
+  async rejectAppointment(appointmentId: string): Promise<Appointment> {
+    return this.updateAppointmentStatus(appointmentId, AppointmentStatus.CANCELLED);
   }
 }
 
 export const appointmentService = new AppointmentService();
 export default appointmentService;
+
+
+
+

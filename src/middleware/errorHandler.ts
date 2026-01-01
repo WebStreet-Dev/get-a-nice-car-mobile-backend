@@ -92,9 +92,6 @@ export function errorHandler(
 
   // Handle Prisma errors
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/fb0ff7d9-eaac-4432-9ff3-49e4f0e88573',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'errorHandler.ts:95',message:'Prisma error caught',data:{errorCode:err.code,errorMessage:err.message,meta:err.meta},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     switch (err.code) {
       case 'P2002':
         sendError(res, 'A record with this value already exists', 409);
@@ -110,12 +107,6 @@ export function errorHandler(
         return;
     }
   }
-  
-  // #region agent log
-  if (err.message?.includes('Authentication failed') || err.message?.includes('credentials')) {
-    fetch('http://127.0.0.1:7242/ingest/fb0ff7d9-eaac-4432-9ff3-49e4f0e88573',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'errorHandler.ts:115',message:'Authentication error detected',data:{errorMessage:err.message,errorName:err.name,isPrismaError:err instanceof Prisma.PrismaClientKnownRequestError,dbUrlExists:!!process.env.DATABASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  }
-  // #endregion
 
   if (err instanceof Prisma.PrismaClientValidationError) {
     sendError(res, 'Invalid data provided', 400);
@@ -150,7 +141,6 @@ export function notFoundHandler(
 ): void {
   sendError(res, `Route ${req.method} ${req.path} not found`, 404);
 }
-
 
 
 

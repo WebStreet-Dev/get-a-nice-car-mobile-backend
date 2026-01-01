@@ -54,3 +54,5 @@ Should return: `{"success": true, "data": [...]}`
 ## Why This Happens
 PostgreSQL only reads credentials **on first container start**. They're stored in Docker volume and can't be changed via Coolify UI.
 
+
+

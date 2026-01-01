@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import appointmentService from '../services/appointment.service.js';
+import vcitaService from '../services/vcita.service.js';
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/response.js';
 import { AuthRequest } from '../types/index.js';
 import {
@@ -12,6 +13,7 @@ export class AppointmentController {
   /**
    * Create a new appointment
    * POST /api/v1/appointments
+   * For Sales department, returns vCita URL instead of creating appointment
    */
   async create(
     req: AuthRequest,
@@ -24,7 +26,17 @@ export class AppointmentController {
         req.user!.id,
         data
       );
-      sendCreated(res, appointment, 'Appointment created successfully');
+
+      // If appointment is null, it means Sales department - return vCita URL
+      if (appointment === null) {
+        sendSuccess(res, {
+          vcitaUrl: vcitaService.getSchedulingUrl(),
+          redirectToVcita: true,
+        }, 'Please schedule your appointment through vCita');
+        return;
+      }
+
+      sendCreated(res, appointment, 'Appointment booked successfully. It will be reviewed by our team.');
     } catch (error) {
       next(error);
     }
@@ -43,22 +55,21 @@ export class AppointmentController {
       const query = req.query as unknown as AppointmentQueryInput;
       const { appointments, total } = await appointmentService.getUserAppointments(
         req.user!.id,
-        query
+        {
+          page: query.page || 1,
+          limit: query.limit || 10,
+          status: query.status as any,
+          departmentId: query.departmentId,
+        }
       );
-      sendPaginated(
-        res,
-        appointments,
-        query.page || 1,
-        query.limit || 10,
-        total
-      );
+      sendPaginated(res, appointments, query.page || 1, query.limit || 10, total);
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Get appointment by ID
+   * Get a single appointment
    * GET /api/v1/appointments/:id
    */
   async getById(
@@ -125,3 +136,7 @@ export class AppointmentController {
 
 export const appointmentController = new AppointmentController();
 export default appointmentController;
+
+
+
+

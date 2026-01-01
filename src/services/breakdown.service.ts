@@ -1,7 +1,9 @@
-import { BreakdownRequest, BreakdownLocationType, BreakdownStatus } from '@prisma/client';
+import { BreakdownRequest, BreakdownStatus, BreakdownLocationType, NotificationType } from '@prisma/client';
 import prisma from './prisma.service.js';
-import { NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
+import { NotFoundError, AppError, ForbiddenError } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
+import adminNotificationService from './admin-notification.service.js';
+import notificationService from './notification.service.js';
 
 export class BreakdownService {
   /**
@@ -28,10 +30,15 @@ export class BreakdownService {
     });
 
     if (activeRequest) {
-      throw new ForbiddenError('You already have an active breakdown request');
+      throw new AppError('You already have an active breakdown request');
     }
 
-    const request = await prisma.breakdownRequest.create({
+    // Validate live duration if location type is LIVE
+    if (data.locationType === BreakdownLocationType.LIVE && !data.liveDurationMinutes) {
+      throw new AppError('Live duration is required for live location sharing');
+    }
+
+    const breakdownRequest = await prisma.breakdownRequest.create({
       data: {
         userId,
         latitude: data.latitude,
@@ -41,11 +48,26 @@ export class BreakdownService {
         notes: data.notes,
         status: BreakdownStatus.PENDING,
       },
+      include: {
+        user: {
+          select: { name: true },
+        },
+      },
     });
 
-    logger.info('Breakdown request created', { requestId: request.id, userId });
+    logger.info('Breakdown request created', { requestId: breakdownRequest.id, userId });
 
-    return request;
+    // Send notification to admins
+    adminNotificationService.notifyBreakdownRequest({
+      requestId: breakdownRequest.id,
+      userName: breakdownRequest.user.name,
+      latitude: data.latitude,
+      longitude: data.longitude,
+    }).catch((err) => {
+      logger.error('Failed to send breakdown notification', { error: err });
+    });
+
+    return breakdownRequest;
   }
 
   /**
@@ -69,24 +91,15 @@ export class BreakdownService {
       throw new ForbiddenError('You do not have access to this breakdown request');
     }
 
-    if (request.status !== BreakdownStatus.IN_PROGRESS && request.status !== BreakdownStatus.PENDING) {
-      throw new ForbiddenError('Cannot update location for a resolved request');
-    }
-
     if (request.locationType !== BreakdownLocationType.LIVE) {
-      throw new ForbiddenError('Location updates are only allowed for LIVE requests');
+      throw new AppError('Location updates are only allowed for live location sharing');
     }
 
-    // Update main location
-    await prisma.breakdownRequest.update({
-      where: { id: requestId },
-      data: {
-        latitude,
-        longitude,
-      },
-    });
+    if (request.status === BreakdownStatus.RESOLVED) {
+      throw new AppError('Cannot update location for resolved requests');
+    }
 
-    // Create location update record
+    // Add location update
     await prisma.breakdownLocationUpdate.create({
       data: {
         breakdownRequestId: requestId,
@@ -95,11 +108,20 @@ export class BreakdownService {
       },
     });
 
-    logger.info('Breakdown location updated', { requestId, userId });
+    // Update main request location
+    await prisma.breakdownRequest.update({
+      where: { id: requestId },
+      data: {
+        latitude,
+        longitude,
+      },
+    });
+
+    logger.info('Breakdown location updated', { requestId });
   }
 
   /**
-   * Get active breakdown request for user
+   * Get active breakdown request for a user
    */
   async getActiveRequest(userId: string): Promise<BreakdownRequest | null> {
     return prisma.breakdownRequest.findFirst({
@@ -112,7 +134,7 @@ export class BreakdownService {
       include: {
         locationUpdates: {
           orderBy: { createdAt: 'desc' },
-          take: 10, // Last 10 location updates
+          take: 10,
         },
       },
     });
@@ -121,7 +143,10 @@ export class BreakdownService {
   /**
    * Get breakdown request by ID
    */
-  async getRequestById(requestId: string, userId: string): Promise<BreakdownRequest> {
+  async getRequestById(
+    requestId: string,
+    userId: string
+  ): Promise<BreakdownRequest> {
     const request = await prisma.breakdownRequest.findUnique({
       where: { id: requestId },
       include: {
@@ -159,7 +184,7 @@ export class BreakdownService {
     }
 
     if (request.status === BreakdownStatus.RESOLVED) {
-      throw new ForbiddenError('Cannot cancel a resolved request');
+      throw new AppError('Cannot cancel a resolved request');
     }
 
     const updatedRequest = await prisma.breakdownRequest.update({
@@ -174,7 +199,142 @@ export class BreakdownService {
 
     return updatedRequest;
   }
+
+  /**
+   * Get all breakdown requests (admin only)
+   */
+  async getAllRequests(options: {
+    page: number;
+    limit: number;
+    status?: BreakdownStatus;
+  }): Promise<{ requests: BreakdownRequest[]; total: number }> {
+    const { page, limit, status } = options;
+    const skip = (page - 1) * limit;
+
+    const where = status ? { status } : {};
+
+    const [requests, total] = await Promise.all([
+      prisma.breakdownRequest.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          locationUpdates: {
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+          },
+        },
+      }),
+      prisma.breakdownRequest.count({ where }),
+    ]);
+
+    return { requests, total };
+  }
+
+  /**
+   * Update breakdown request status (admin only)
+   */
+  async updateRequestStatus(
+    requestId: string,
+    status: BreakdownStatus,
+    assignedTo?: string
+  ): Promise<BreakdownRequest> {
+    const request = await prisma.breakdownRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    if (!request) {
+      throw new NotFoundError('Breakdown request');
+    }
+
+    const updatedRequest = await prisma.breakdownRequest.update({
+      where: { id: requestId },
+      data: {
+        status,
+        ...(status === BreakdownStatus.RESOLVED && { resolvedAt: new Date() }),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    logger.info('Breakdown request status updated', { requestId, status });
+
+    // Send notification to user when status changes
+    if (status === BreakdownStatus.IN_PROGRESS) {
+      // Breakdown assigned/accepted
+      await notificationService.createNotification({
+        userId: request.userId,
+        title: 'Breakdown Request Accepted',
+        message: 'Your breakdown request has been accepted and help is on the way.',
+        type: NotificationType.SERVICE,
+        data: {
+          requestId: request.id,
+          status: 'IN_PROGRESS',
+        },
+      }).catch((err) => {
+        logger.error('Failed to send breakdown acceptance notification', { error: err });
+      });
+
+      // Notify admin that breakdown was assigned
+      if (assignedTo) {
+        adminNotificationService.notifyBreakdownAssigned({
+          requestId: request.id,
+          userName: request.user.name,
+          assignedTo,
+        }).catch((err) => {
+          logger.error('Failed to send breakdown assignment notification', { error: err });
+        });
+      }
+    } else if (status === BreakdownStatus.RESOLVED) {
+      // Breakdown resolved
+      await notificationService.createNotification({
+        userId: request.userId,
+        title: 'Breakdown Resolved',
+        message: 'Your breakdown request has been resolved.',
+        type: NotificationType.SERVICE,
+        data: {
+          requestId: request.id,
+          status: 'RESOLVED',
+        },
+      }).catch((err) => {
+        logger.error('Failed to send breakdown resolution notification', { error: err });
+      });
+    }
+
+    return updatedRequest;
+  }
 }
 
 export const breakdownService = new BreakdownService();
 export default breakdownService;
+
+
+
+
