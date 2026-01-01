@@ -70,13 +70,13 @@ export class AdminController {
     }
   }
 
-  // ==================== USERS ====================
+  // ==================== CLIENTS ====================
 
   /**
-   * Get all users
-   * GET /api/v1/admin/users
+   * Get all clients
+   * GET /api/v1/admin/clients
    */
-  async getUsers(
+  async getClients(
     req: Request,
     res: Response,
     next: NextFunction
@@ -86,36 +86,188 @@ export class AdminController {
       const limit = parseInt(req.query.limit as string) || 10;
       const search = req.query.search as string | undefined;
 
-      const { users, total } = await userService.getAllUsers({ page, limit, search });
-      sendPaginated(res, users, page, limit, total);
+      const { clients, total } = await userService.getAllClients({ page, limit, search });
+      sendPaginated(res, clients, page, limit, total);
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Toggle user status
-   * PUT /api/v1/admin/users/:id/toggle-status
+   * Toggle client status
+   * PUT /api/v1/admin/clients/:id/toggle-status
    */
-  async toggleUserStatus(
+  async toggleClientStatus(
     req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
       const { id } = req.params;
-      const user = await userService.toggleUserStatus(id);
-      sendSuccess(res, user, 'User status updated');
+      const client = await userService.toggleUserStatus(id);
+      sendSuccess(res, client, 'Client status updated');
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Change user role (SUPER_ADMIN only)
-   * PUT /api/v1/admin/users/:id/role
+   * Get pending clients
+   * GET /api/v1/admin/clients/pending
    */
-  async changeUserRole(
+  async getPendingClients(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const { clients, total } = await userService.getPendingClients({ page, limit });
+      sendPaginated(res, clients, page, limit, total);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Approve client
+   * PUT /api/v1/admin/clients/:id/approve
+   */
+  async approveClient(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const approvedBy = req.user?.id || '';
+      const client = await authService.approveUser(id, approvedBy);
+      sendSuccess(res, client, 'Client approved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reject client
+   * PUT /api/v1/admin/clients/:id/reject
+   */
+  async rejectClient(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const rejectedBy = req.user?.id || '';
+
+      if (!reason || reason.trim().length === 0) {
+        throw new AppError('Rejection reason is required', 400);
+      }
+
+      const client = await authService.rejectUser(id, reason, rejectedBy);
+      sendSuccess(res, client, 'Client rejected successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==================== EMPLOYEES ====================
+
+  /**
+   * Get all employees
+   * GET /api/v1/admin/employees
+   */
+  async getEmployees(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const search = req.query.search as string | undefined;
+
+      const { employees, total } = await userService.getAllEmployees({ page, limit, search });
+      sendPaginated(res, employees, page, limit, total);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Create employee
+   * POST /api/v1/admin/employees
+   */
+  async createEmployee(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      // Both ADMIN and SUPER_ADMIN can create employees
+      if (req.user?.role !== Role.ADMIN && req.user?.role !== Role.SUPER_ADMIN) {
+        throw new ForbiddenError('Only Admin and Super Admin can create employees');
+      }
+
+      const { name, email, phone, password, role, customRoleId } = req.body;
+      const createdBy = req.user?.id || '';
+
+      const employee = await authService.createInternalUser(
+        { name, email, phone, password, role: role || Role.USER, customRoleId },
+        createdBy
+      );
+      sendCreated(res, employee, 'Employee created successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Update employee
+   * PUT /api/v1/admin/employees/:id
+   */
+  async updateEmployee(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { name, email, phone } = req.body;
+
+      const employee = await userService.updateProfile(id, { name, phone });
+      sendSuccess(res, employee, 'Employee updated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Toggle employee status
+   * PUT /api/v1/admin/employees/:id/toggle-status
+   */
+  async toggleEmployeeStatus(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const employee = await userService.toggleUserStatus(id);
+      sendSuccess(res, employee, 'Employee status updated');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Change employee role (SUPER_ADMIN only)
+   * PUT /api/v1/admin/employees/:id/role
+   */
+  async changeEmployeeRole(
     req: AuthRequest,
     res: Response,
     next: NextFunction
@@ -123,7 +275,7 @@ export class AdminController {
     try {
       // Only SUPER_ADMIN can change roles
       if (req.user?.role !== Role.SUPER_ADMIN) {
-        throw new ForbiddenError('Only Super Admin can change user roles');
+        throw new ForbiddenError('Only Super Admin can change employee roles');
       }
 
       const { id } = req.params;
@@ -139,99 +291,36 @@ export class AdminController {
         throw new ForbiddenError('Cannot change your own role');
       }
 
-      const user = await userService.changeUserRole(id, role);
-      sendSuccess(res, user, 'User role updated');
+      const employee = await userService.changeUserRole(id, role);
+      sendSuccess(res, employee, 'Employee role updated');
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Get pending users
-   * GET /api/v1/admin/users/pending
+   * Delete employee
+   * DELETE /api/v1/admin/employees/:id
    */
-  async getPendingUsers(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
-    try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
-      const { users, total } = await userService.getPendingUsers({ page, limit });
-      sendPaginated(res, users, page, limit, total);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Approve user
-   * PUT /api/v1/admin/users/:id/approve
-   */
-  async approveUser(
+  async deleteEmployee(
     req: AuthRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
       const { id } = req.params;
-      const approvedBy = req.user?.id || '';
-      const user = await authService.approveUser(id, approvedBy);
-      sendSuccess(res, user, 'User approved successfully');
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Reject user
-   * PUT /api/v1/admin/users/:id/reject
-   */
-  async rejectUser(
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { reason } = req.body;
-      const rejectedBy = req.user?.id || '';
-
-      if (!reason || reason.trim().length === 0) {
-        throw new AppError('Rejection reason is required', 400);
+      
+      // Check if employee exists and is actually an employee
+      const employee = await userService.getUserById(id);
+      
+      // Prevent deleting super admin
+      if (employee.role === Role.SUPER_ADMIN) {
+        throw new ForbiddenError('Super admin accounts cannot be deleted');
       }
 
-      const user = await authService.rejectUser(id, reason, rejectedBy);
-      sendSuccess(res, user, 'User rejected successfully');
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Create internal user (employee)
-   * POST /api/v1/admin/users/create-internal
-   */
-  async createInternalUser(
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
-    try {
-      // Only SUPER_ADMIN can create internal users
-      if (req.user?.role !== Role.SUPER_ADMIN) {
-        throw new ForbiddenError('Only Super Admin can create internal users');
-      }
-
-      const { name, email, phone, password, role, customRoleId } = req.body;
-      const createdBy = req.user?.id || '';
-
-      const user = await authService.createInternalUser(
-        { name, email, phone, password, role, customRoleId },
-        createdBy
-      );
-      sendCreated(res, user, 'Internal user created successfully');
+      // Soft delete by setting isActive to false
+      await userService.toggleUserStatus(id);
+      sendSuccess(res, null, 'Employee deleted successfully');
     } catch (error) {
       next(error);
     }
