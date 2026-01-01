@@ -34,7 +34,7 @@ export class AdminController {
         totalDepartments,
         totalFaqs,
       ] = await Promise.all([
-        prisma.user.count({ where: { userType: UserType.CLIENT } }),
+        prisma.user.count({ where: { userType: 'CLIENT' } }),
         prisma.appointment.count(),
         prisma.appointment.count({ where: { status: AppointmentStatus.PENDING } }),
         prisma.breakdownRequest.count({
@@ -56,7 +56,7 @@ export class AdminController {
 
       sendSuccess(res, {
         stats: {
-          totalUsers,
+          totalClients,
           totalAppointments,
           pendingAppointments,
           activeBreakdowns,

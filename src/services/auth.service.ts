@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User, Role, AccountStatus, NotificationType, UserType } from '@prisma/client';
+import { User, Role, AccountStatus, NotificationType } from '@prisma/client';
 import prisma from './prisma.service.js';
 import config from '../config/index.js';
 import { AppError, UnauthorizedError, NotFoundError } from '../middleware/errorHandler.js';
@@ -98,6 +98,7 @@ export class AuthService {
         phone: data.phone,
         passwordHash,
         role: Role.USER,
+        userType: 'CLIENT' as const,
         accountStatus: AccountStatus.PENDING,
       },
     });
@@ -434,6 +435,7 @@ export class AuthService {
         phone: data.phone,
         passwordHash,
         role: data.role,
+        userType: 'EMPLOYEE' as const,
         accountStatus: AccountStatus.APPROVED,
         approvedAt: new Date(),
         approvedBy: createdBy,

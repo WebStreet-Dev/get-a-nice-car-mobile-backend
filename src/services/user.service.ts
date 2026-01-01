@@ -109,6 +109,96 @@ export class UserService {
   }
 
   /**
+   * Get all clients (admin only)
+   */
+  async getAllClients(options: {
+    page: number;
+    limit: number;
+    search?: string;
+  }): Promise<{
+    clients: Omit<User, 'passwordHash'>[];
+    total: number;
+  }> {
+    const { page, limit, search } = options;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      userType: 'CLIENT' as const,
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' as const } },
+              { email: { contains: search, mode: 'insensitive' as const } },
+              { phone: { contains: search } },
+            ],
+          }
+        : {}),
+    };
+
+    const [clients, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    const clientsWithoutPassword = clients.map((client) => {
+      const { passwordHash: _, ...clientWithoutPassword } = client;
+      return clientWithoutPassword;
+    });
+
+    return { clients: clientsWithoutPassword, total };
+  }
+
+  /**
+   * Get all employees (admin only)
+   */
+  async getAllEmployees(options: {
+    page: number;
+    limit: number;
+    search?: string;
+  }): Promise<{
+    employees: Omit<User, 'passwordHash'>[];
+    total: number;
+  }> {
+    const { page, limit, search } = options;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      userType: 'EMPLOYEE' as const,
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' as const } },
+              { email: { contains: search, mode: 'insensitive' as const } },
+              { phone: { contains: search } },
+            ],
+          }
+        : {}),
+    };
+
+    const [employees, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    const employeesWithoutPassword = employees.map((employee) => {
+      const { passwordHash: _, ...employeeWithoutPassword } = employee;
+      return employeeWithoutPassword;
+    });
+
+    return { employees: employeesWithoutPassword, total };
+  }
+
+  /**
    * Toggle user active status (admin only)
    */
   async toggleUserStatus(userId: string): Promise<Omit<User, 'passwordHash'>> {
@@ -221,7 +311,7 @@ export class UserService {
 
     const where = {
       accountStatus: AccountStatus.PENDING,
-      userType: UserType.CLIENT,
+      userType: 'CLIENT' as const,
     };
 
     const [clients, total] = await Promise.all([
