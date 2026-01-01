@@ -17,7 +17,8 @@ export function authenticate(
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedError('No token provided');
+      const error = new UnauthorizedError('No token provided');
+      return next(error);
     }
 
     const token = authHeader.split(' ')[1];
@@ -31,6 +32,7 @@ export function authenticate(
 
     next();
   } catch (error) {
+    // Ensure error is passed to error handler, not treated as route not found
     next(error);
   }
 }

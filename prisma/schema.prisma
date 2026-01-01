@@ -18,6 +18,11 @@ enum Role {
   SUPER_ADMIN
 }
 
+enum UserType {
+  CLIENT
+  EMPLOYEE
+}
+
 enum AdminNotificationType {
   BREAKDOWN
   APPOINTMENT
@@ -77,6 +82,7 @@ model User {
   phone        String
   passwordHash String        @map("password_hash")
   role         Role          @default(USER)
+  userType     UserType      @default(CLIENT) @map("user_type")
   fcmToken     String?       @map("fcm_token")
   isActive     Boolean       @default(true) @map("is_active")
   accountStatus AccountStatus @default(PENDING) @map("account_status")
@@ -95,6 +101,7 @@ model User {
   customRole         CustomRole?            @relation(fields: [customRoleId], references: [id])
 
   @@map("users")
+  @@index([userType])
 }
 
 model RefreshToken {

@@ -27,14 +27,14 @@ export class AdminController {
   ): Promise<void> {
     try {
       const [
-        totalUsers,
+        totalClients,
         totalAppointments,
         pendingAppointments,
         activeBreakdowns,
         totalDepartments,
         totalFaqs,
       ] = await Promise.all([
-        prisma.user.count(),
+        prisma.user.count({ where: { userType: UserType.CLIENT } }),
         prisma.appointment.count(),
         prisma.appointment.count({ where: { status: AppointmentStatus.PENDING } }),
         prisma.breakdownRequest.count({

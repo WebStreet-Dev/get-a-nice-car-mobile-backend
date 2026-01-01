@@ -123,8 +123,17 @@ The API will be available at `http://localhost:3000`
 
 ### Admin (`/api/v1/admin`)
 - `GET /dashboard` - Dashboard stats
-- `GET /users` - List users
-- `PUT /users/:id/toggle-status` - Toggle user status
+- `GET /clients` - List clients
+- `PUT /clients/:id/toggle-status` - Toggle client status
+- `GET /clients/pending` - Get pending clients
+- `PUT /clients/:id/approve` - Approve client
+- `PUT /clients/:id/reject` - Reject client
+- `GET /employees` - List employees
+- `POST /employees` - Create employee (Admin and Super Admin)
+- `PUT /employees/:id` - Update employee
+- `PUT /employees/:id/toggle-status` - Toggle employee status
+- `PUT /employees/:id/role` - Change employee role (Super Admin only)
+- `DELETE /employees/:id` - Delete employee
 - `GET /appointments` - List all appointments
 - `PUT /appointments/:id/status` - Update status
 - `GET /departments` - List departments

@@ -8,12 +8,39 @@ import {
   createDownpaymentCategorySchema,
   updateDownpaymentCategorySchema,
 } from '../validators/downpayment.validator.js';
+import logger from '../utils/logger.js';
 
 const router = Router();
 
+// Log all admin route requests for debugging (before auth to see all attempts)
+router.use((req, res, next) => {
+  logger.info(`Admin route attempt: ${req.method} ${req.originalUrl || req.url}, path: ${req.path}, baseUrl: ${req.baseUrl}`);
+  next();
+});
+
+// Test route to verify router is working (before auth)
+router.get('/test', (req, res) => {
+  logger.info('Admin test route hit - router is working');
+  res.json({ 
+    success: true, 
+    message: 'Admin router is working', 
+    path: req.path, 
+    url: req.url,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl
+  });
+});
+
 // All admin routes require authentication and admin role
+// Note: authenticate and adminOnly will throw errors that are caught by errorHandler
 router.use(authenticate);
 router.use(adminOnly);
+
+// Log successful authentication
+router.use((req, res, next) => {
+  logger.info(`Admin route authenticated: ${req.method} ${req.path}, user: ${(req as any).user?.email}`);
+  next();
+});
 
 // ==================== DASHBOARD ====================
 
@@ -24,56 +51,86 @@ router.use(adminOnly);
  */
 router.get('/dashboard', adminController.getDashboard.bind(adminController));
 
-// ==================== USERS ====================
+// ==================== CLIENTS ====================
 
 /**
- * @route   GET /api/v1/admin/users
- * @desc    Get all users
+ * @route   GET /api/v1/admin/clients
+ * @desc    Get all clients
  * @access  Admin
  */
-router.get('/users', adminController.getUsers.bind(adminController));
+router.get('/clients', adminController.getClients.bind(adminController));
 
 /**
- * @route   PUT /api/v1/admin/users/:id/toggle-status
- * @desc    Toggle user active status
+ * @route   PUT /api/v1/admin/clients/:id/toggle-status
+ * @desc    Toggle client active status
  * @access  Admin
  */
-router.put('/users/:id/toggle-status', adminController.toggleUserStatus.bind(adminController));
+router.put('/clients/:id/toggle-status', adminController.toggleClientStatus.bind(adminController));
 
 /**
- * @route   PUT /api/v1/admin/users/:id/role
- * @desc    Change user role (SUPER_ADMIN only)
+ * @route   GET /api/v1/admin/clients/pending
+ * @desc    Get pending clients
+ * @access  Admin
+ */
+router.get('/clients/pending', adminController.getPendingClients.bind(adminController));
+
+/**
+ * @route   PUT /api/v1/admin/clients/:id/approve
+ * @desc    Approve client account
+ * @access  Admin
+ */
+router.put('/clients/:id/approve', adminController.approveClient.bind(adminController));
+
+/**
+ * @route   PUT /api/v1/admin/clients/:id/reject
+ * @desc    Reject client account
+ * @access  Admin
+ */
+router.put('/clients/:id/reject', adminController.rejectClient.bind(adminController));
+
+// ==================== EMPLOYEES ====================
+
+/**
+ * @route   GET /api/v1/admin/employees
+ * @desc    Get all employees
+ * @access  Admin
+ */
+router.get('/employees', adminController.getEmployees.bind(adminController));
+
+/**
+ * @route   POST /api/v1/admin/employees
+ * @desc    Create employee
+ * @access  Admin
+ */
+router.post('/employees', adminController.createEmployee.bind(adminController));
+
+/**
+ * @route   PUT /api/v1/admin/employees/:id
+ * @desc    Update employee
+ * @access  Admin
+ */
+router.put('/employees/:id', adminController.updateEmployee.bind(adminController));
+
+/**
+ * @route   PUT /api/v1/admin/employees/:id/toggle-status
+ * @desc    Toggle employee active status
+ * @access  Admin
+ */
+router.put('/employees/:id/toggle-status', adminController.toggleEmployeeStatus.bind(adminController));
+
+/**
+ * @route   PUT /api/v1/admin/employees/:id/role
+ * @desc    Change employee role (SUPER_ADMIN only)
  * @access  Super Admin
  */
-router.put('/users/:id/role', adminController.changeUserRole.bind(adminController));
+router.put('/employees/:id/role', adminController.changeEmployeeRole.bind(adminController));
 
 /**
- * @route   GET /api/v1/admin/users/pending
- * @desc    Get pending users
+ * @route   DELETE /api/v1/admin/employees/:id
+ * @desc    Delete employee
  * @access  Admin
  */
-router.get('/users/pending', adminController.getPendingUsers.bind(adminController));
-
-/**
- * @route   PUT /api/v1/admin/users/:id/approve
- * @desc    Approve user account
- * @access  Admin
- */
-router.put('/users/:id/approve', adminController.approveUser.bind(adminController));
-
-/**
- * @route   PUT /api/v1/admin/users/:id/reject
- * @desc    Reject user account
- * @access  Admin
- */
-router.put('/users/:id/reject', adminController.rejectUser.bind(adminController));
-
-/**
- * @route   POST /api/v1/admin/users/create-internal
- * @desc    Create internal user (employee)
- * @access  Super Admin
- */
-router.post('/users/create-internal', adminController.createInternalUser.bind(adminController));
+router.delete('/employees/:id', adminController.deleteEmployee.bind(adminController));
 
 // ==================== APPOINTMENTS ====================
 
@@ -303,18 +360,18 @@ router.put('/roles/:id', roleController.update.bind(roleController));
 router.delete('/roles/:id', roleController.delete.bind(roleController));
 
 /**
- * @route   POST /api/v1/admin/users/:id/assign-role
- * @desc    Assign role to user
+ * @route   POST /api/v1/admin/employees/:id/assign-role
+ * @desc    Assign role to employee
  * @access  Super Admin
  */
-router.post('/users/:id/assign-role', roleController.assignToUser.bind(roleController));
+router.post('/employees/:id/assign-role', roleController.assignToUser.bind(roleController));
 
 /**
- * @route   DELETE /api/v1/admin/users/:id/role
- * @desc    Remove role from user
+ * @route   DELETE /api/v1/admin/employees/:id/role
+ * @desc    Remove role from employee
  * @access  Super Admin
  */
-router.delete('/users/:id/role', roleController.removeFromUser.bind(roleController));
+router.delete('/employees/:id/role', roleController.removeFromUser.bind(roleController));
 
 export default router;
 

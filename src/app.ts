@@ -82,7 +82,13 @@ app.use('/api/v1/faqs', faqRoutes);
 app.use('/api/v1/breakdown', breakdownRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/downpayment', downpaymentRoutes);
-app.use('/api/v1/admin', adminRoutes);
+
+// Admin routes - log registration
+logger.info('Registering admin routes at /api/v1/admin');
+app.use('/api/v1/admin', (req, res, next) => {
+  logger.info(`Admin route hit: ${req.method} ${req.originalUrl || req.url}, path: ${req.path}`);
+  next();
+}, adminRoutes);
 
 // Error handling
 app.use(notFoundHandler);

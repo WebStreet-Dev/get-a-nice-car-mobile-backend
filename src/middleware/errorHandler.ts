@@ -139,7 +139,8 @@ export function notFoundHandler(
   res: Response,
   _next: NextFunction
 ): void {
-  sendError(res, `Route ${req.method} ${req.path} not found`, 404);
+  logger.warn(`Route not found: ${req.method} ${req.originalUrl || req.url}, path: ${req.path}`);
+  sendError(res, `Route ${req.method} ${req.originalUrl || req.path} not found`, 404);
 }
 
 

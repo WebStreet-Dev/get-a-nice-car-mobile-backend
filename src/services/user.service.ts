@@ -172,7 +172,7 @@ export class UserService {
   }
 
   /**
-   * Get pending users (admin only)
+   * Get pending users (admin only) - DEPRECATED, use getPendingClients
    */
   async getPendingUsers(options: {
     page: number;
@@ -204,6 +204,42 @@ export class UserService {
     });
 
     return { users: usersWithoutPassword, total };
+  }
+
+  /**
+   * Get pending clients (admin only)
+   */
+  async getPendingClients(options: {
+    page: number;
+    limit: number;
+  }): Promise<{
+    clients: Omit<User, 'passwordHash'>[];
+    total: number;
+  }> {
+    const { page, limit } = options;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      accountStatus: AccountStatus.PENDING,
+      userType: UserType.CLIENT,
+    };
+
+    const [clients, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    const clientsWithoutPassword = clients.map((client) => {
+      const { passwordHash: _, ...clientWithoutPassword } = client;
+      return clientWithoutPassword;
+    });
+
+    return { clients: clientsWithoutPassword, total };
   }
 }
 

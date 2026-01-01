@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User, Role, AccountStatus, NotificationType } from '@prisma/client';
+import { User, Role, AccountStatus, NotificationType, UserType } from '@prisma/client';
 import prisma from './prisma.service.js';
 import config from '../config/index.js';
 import { AppError, UnauthorizedError, NotFoundError } from '../middleware/errorHandler.js';
