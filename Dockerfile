@@ -40,6 +40,10 @@ COPY --from=builder /app/dist ./dist
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
+
+# Create uploads directory with proper permissions
+RUN mkdir -p /app/uploads && chown -R nodejs:nodejs /app/uploads
+
 USER nodejs
 
 # Expose port
