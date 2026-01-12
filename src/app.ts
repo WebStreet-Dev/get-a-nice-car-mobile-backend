@@ -14,18 +14,10 @@ import { startAppointmentReminderJob } from './jobs/appointment-reminders.job.js
 import webSocketService from './services/websocket.service.js';
 
 // Get __dirname equivalent for ES modules
-// Type assertion to bypass TypeScript error for import.meta in CommonJS output mode
-const getDirname = () => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const metaUrl = (import.meta as any).url;
-    return path.dirname(fileURLToPath(metaUrl));
-  } catch {
-    // Fallback for environments where import.meta is not available
-    return process.cwd();
-  }
-};
-const __dirname = getDirname();
+// Using eval to bypass TypeScript's import.meta check in CommonJS mode
+// This works at runtime because Node.js supports import.meta in ES modules
+const __filename = eval('fileURLToPath(import.meta.url)');
+const __dirname = path.dirname(__filename);
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
