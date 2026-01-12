@@ -27,10 +27,20 @@ const storage = multer.diskStorage({
 // File filter - only allow images
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-  if (allowedMimes.includes(file.mimetype)) {
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+  
+  // Check MIME type first
+  const hasValidMimeType = allowedMimes.includes(file.mimetype);
+  
+  // Also check file extension as fallback (for cases where MIME type might be incorrect)
+  const fileExt = path.extname(file.originalname).toLowerCase();
+  const hasValidExtension = allowedExtensions.includes(fileExt);
+  
+  // Accept if either MIME type or extension is valid
+  if (hasValidMimeType || hasValidExtension) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only images (JPEG, PNG, GIF, WebP) are allowed.'));
+    cb(new Error(`Invalid file type. Only images (JPEG, PNG, GIF, WebP) are allowed. Received: ${file.mimetype}, extension: ${fileExt}`));
   }
 };
 
