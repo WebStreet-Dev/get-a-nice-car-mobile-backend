@@ -28,6 +28,7 @@ import notificationRoutes from './routes/notification.routes.js';
 import downpaymentRoutes from './routes/downpayment.routes.js';
 import salesPersonRoutes from './routes/sales-person.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
 
 const app = express();
 
@@ -94,6 +95,10 @@ app.get('/health', (_req, res) => {
 const adminDistPath = path.join(__dirname, '../admin/dist');
 app.use(express.static(adminDistPath));
 
+// Serve uploaded files
+const uploadsPath = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
+
 // API routes
 app.use('/api/v1/auth', authLimiter, authRoutes);
 app.use('/api/v1/users', userRoutes);
@@ -104,6 +109,7 @@ app.use('/api/v1/breakdown', breakdownRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/downpayment', downpaymentRoutes);
 app.use('/api/v1/sales-persons', salesPersonRoutes);
+app.use('/api/v1/upload', uploadRoutes);
 
 // Admin routes - log registration
 logger.info('Registering admin routes at /api/v1/admin');
