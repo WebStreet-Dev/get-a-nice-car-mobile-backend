@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthRequest } from '../types/index.js';
@@ -9,11 +10,29 @@ import { AuthRequest } from '../types/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Ensure uploads directory exists
+const ensureUploadsDirectory = () => {
+  const uploadPath = path.join(__dirname, '../../uploads');
+  try {
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true, mode: 0o755 });
+    }
+  } catch (error) {
+    console.error('Error creating uploads directory:', error);
+    throw error;
+  }
+  return uploadPath;
+};
+
+// Initialize uploads directory
+const uploadsPath = ensureUploadsDirectory();
+
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../uploads');
-    cb(null, uploadPath);
+    // Ensure directory exists before saving
+    ensureUploadsDirectory();
+    cb(null, uploadsPath);
   },
   filename: (req, file, cb) => {
     // Generate unique filename: timestamp-random-originalname
@@ -69,6 +88,13 @@ export class UploadController {
         return;
       }
 
+      // Verify file was actually saved
+      const filePath = path.join(uploadsPath, req.file.filename);
+      if (!fs.existsSync(filePath)) {
+        sendError(res, 'File was not saved successfully', 500);
+        return;
+      }
+
       // Generate URL for the uploaded file
       const baseUrl = req.protocol + '://' + req.get('host');
       const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
@@ -81,6 +107,7 @@ export class UploadController {
         mimetype: req.file.mimetype,
       }, 'Image uploaded successfully');
     } catch (error) {
+      console.error('Upload error:', error);
       next(error);
     }
   }

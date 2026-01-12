@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import config from './config/index.js';
@@ -95,8 +96,11 @@ app.get('/health', (_req, res) => {
 const adminDistPath = path.join(__dirname, '../admin/dist');
 app.use(express.static(adminDistPath));
 
-// Serve uploaded files
+// Serve uploaded files - ensure directory exists
 const uploadsPath = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
 app.use('/uploads', express.static(uploadsPath));
 
 // API routes
