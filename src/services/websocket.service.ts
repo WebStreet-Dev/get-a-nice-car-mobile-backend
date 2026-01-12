@@ -46,7 +46,7 @@ class WebSocketService {
     }
 
     try {
-      const decoded = jwt.verify(token, config.jwtSecret) as { userId: string; role: Role };
+      const decoded = jwt.verify(token, config.jwt.secret) as { userId: string; role: Role };
       
       // Only allow ADMIN and SUPER_ADMIN
       if (decoded.role !== Role.ADMIN && decoded.role !== Role.SUPER_ADMIN) {

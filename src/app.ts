@@ -13,6 +13,8 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { startAppointmentReminderJob } from './jobs/appointment-reminders.job.js';
 import webSocketService from './services/websocket.service.js';
 
+// Get __dirname equivalent for ES modules
+// @ts-expect-error - import.meta is available at runtime in ES modules, TypeScript error is false positive
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
