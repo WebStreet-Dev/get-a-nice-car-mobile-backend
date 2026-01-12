@@ -1,6 +1,7 @@
 {
   "name": "nicecar-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Nice Car Mobile App Backend API",
   "main": "dist/app.js",
   "scripts": {
