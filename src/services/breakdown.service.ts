@@ -330,6 +330,76 @@ export class BreakdownService {
 
     return updatedRequest;
   }
+
+  /**
+   * Approve breakdown request (admin only) - moves from PENDING to IN_PROGRESS
+   */
+  async approveBreakdown(requestId: string, assignedTo?: string): Promise<BreakdownRequest> {
+    return this.updateRequestStatus(requestId, BreakdownStatus.IN_PROGRESS, assignedTo);
+  }
+
+  /**
+   * Reject breakdown request (admin only) - marks as RESOLVED with rejection
+   */
+  async rejectBreakdown(requestId: string): Promise<BreakdownRequest> {
+    const request = await prisma.breakdownRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    if (!request) {
+      throw new NotFoundError('Breakdown request');
+    }
+
+    if (request.status !== BreakdownStatus.PENDING) {
+      throw new AppError('Only pending breakdown requests can be rejected');
+    }
+
+    const updatedRequest = await prisma.breakdownRequest.update({
+      where: { id: requestId },
+      data: {
+        status: BreakdownStatus.RESOLVED,
+        resolvedAt: new Date(),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    // Send notification to user
+    await notificationService.createNotification({
+      userId: request.userId,
+      title: 'Breakdown Request Rejected',
+      message: 'Your breakdown request has been rejected. Please contact support for assistance.',
+      type: NotificationType.SERVICE,
+      data: {
+        requestId: request.id,
+        status: 'RESOLVED',
+      },
+    }).catch((err) => {
+      logger.error('Failed to send breakdown rejection notification', { error: err });
+    });
+
+    logger.info('Breakdown request rejected', { requestId });
+
+    return updatedRequest;
+  }
 }
 
 export const breakdownService = new BreakdownService();

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import adminController from '../controllers/admin.controller.js';
 import downpaymentController from '../controllers/downpayment.controller.js';
 import roleController from '../controllers/role.controller.js';
+import salesPersonController from '../controllers/sales-person.controller.js';
 import { authenticate, adminOnly } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import {
@@ -9,6 +10,8 @@ import {
   updateDownpaymentCategorySchema,
 } from '../validators/downpayment.validator.js';
 import logger from '../utils/logger.js';
+
+// Controllers should be loaded at this point
 
 const router = Router();
 
@@ -49,7 +52,7 @@ router.use((req, res, next) => {
  * @desc    Get dashboard statistics
  * @access  Admin
  */
-router.get('/dashboard', adminController.getDashboard.bind(adminController));
+router.get('/dashboard', (req, res, next) => adminController.getDashboard(req, res, next));
 
 // ==================== CLIENTS ====================
 
@@ -58,7 +61,9 @@ router.get('/dashboard', adminController.getDashboard.bind(adminController));
  * @desc    Get all clients
  * @access  Admin
  */
-router.get('/clients', adminController.getClients.bind(adminController));
+router.get('/clients', (req, res, next) => {
+  adminController.getClients(req, res, next);
+});
 
 /**
  * @route   PUT /api/v1/admin/clients/:id/toggle-status
@@ -238,6 +243,20 @@ router.get('/breakdown', adminController.getBreakdownRequests.bind(adminControll
  */
 router.put('/breakdown/:id/status', adminController.updateBreakdownStatus.bind(adminController));
 
+/**
+ * @route   PUT /api/v1/admin/breakdown/:id/approve
+ * @desc    Approve breakdown request
+ * @access  Admin
+ */
+router.put('/breakdown/:id/approve', adminController.approveBreakdown.bind(adminController));
+
+/**
+ * @route   PUT /api/v1/admin/breakdown/:id/reject
+ * @desc    Reject breakdown request
+ * @access  Admin
+ */
+router.put('/breakdown/:id/reject', adminController.rejectBreakdown.bind(adminController));
+
 // ==================== NOTIFICATIONS ====================
 
 /**
@@ -357,7 +376,9 @@ router.put('/roles/:id', roleController.update.bind(roleController));
  * @desc    Delete role
  * @access  Super Admin
  */
-router.delete('/roles/:id', roleController.delete.bind(roleController));
+router.delete('/roles/:id', (req, res, next) => {
+  roleController.delete(req, res, next);
+});
 
 /**
  * @route   POST /api/v1/admin/employees/:id/assign-role
@@ -372,6 +393,36 @@ router.post('/employees/:id/assign-role', roleController.assignToUser.bind(roleC
  * @access  Super Admin
  */
 router.delete('/employees/:id/role', roleController.removeFromUser.bind(roleController));
+
+// ==================== SALES PERSONS ====================
+
+/**
+ * @route   GET /api/v1/admin/sales-persons
+ * @desc    Get all sales persons (including inactive)
+ * @access  Admin
+ */
+router.get('/sales-persons', salesPersonController.getAllAdmin.bind(salesPersonController));
+
+/**
+ * @route   POST /api/v1/admin/sales-persons
+ * @desc    Create sales person
+ * @access  Admin
+ */
+router.post('/sales-persons', salesPersonController.create.bind(salesPersonController));
+
+/**
+ * @route   PUT /api/v1/admin/sales-persons/:id
+ * @desc    Update sales person
+ * @access  Admin
+ */
+router.put('/sales-persons/:id', salesPersonController.update.bind(salesPersonController));
+
+/**
+ * @route   DELETE /api/v1/admin/sales-persons/:id
+ * @desc    Delete sales person
+ * @access  Admin
+ */
+router.delete('/sales-persons/:id', salesPersonController.delete.bind(salesPersonController));
 
 export default router;
 

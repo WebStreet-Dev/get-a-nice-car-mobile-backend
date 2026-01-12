@@ -76,13 +76,25 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface AdminNotification {
+  id: string;
+  type: 'BREAKDOWN' | 'APPOINTMENT' | 'USER_REGISTERED' | 'GENERAL';
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface DashboardStats {
-  totalUsers: number;
+  totalClients: number;
   totalAppointments: number;
   pendingAppointments: number;
   activeBreakdowns: number;
   totalDepartments: number;
   totalFaqs: number;
+  // Backward compatibility
+  totalUsers?: number;
 }
 
 export interface ApiResponse<T> {
@@ -111,6 +123,16 @@ export interface AuthTokens {
 export interface LoginResponse {
   user: User;
   tokens: AuthTokens;
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  isSystemRole: boolean;
+  permissions: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 

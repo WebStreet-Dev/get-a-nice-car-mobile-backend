@@ -78,3 +78,4 @@ npm run dev
 When you're ready for proper migrations in production:
 1. Use `prisma migrate deploy` 
 2. Or set up proper migration baseline
+

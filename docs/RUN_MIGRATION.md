@@ -102,3 +102,4 @@ npx prisma migrate reset
    npx prisma studio
    ```
    Check that users have the `userType` field populated.
+

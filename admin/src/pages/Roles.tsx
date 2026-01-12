@@ -3,19 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Table, Button, Space, Typography, message, Modal, Input, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { adminApi } from '../services/api';
+import type { Role } from '../types';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
-interface Role {
-  id: string;
-  name: string;
-  description?: string;
-  isSystemRole: boolean;
-  permissions: string[];
-  createdAt: string;
-  updatedAt: string;
-}
 
 export default function RolesPage() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -25,31 +16,12 @@ export default function RolesPage() {
 
   const { data: roles, isLoading } = useQuery<Role[]>({
     queryKey: ['roles'],
-    queryFn: async () => {
-      const response = await fetch('/api/v1/admin/roles', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-      const result = await response.json();
-      return result.data || [];
-    },
+    queryFn: () => adminApi.getRoles(),
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: { name: string; description?: string; permissions: string[] }) => {
-      const response = await fetch('/api/v1/admin/roles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: JSON.stringify(data),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to create role');
-      return result.data;
-    },
+    mutationFn: (data: { name: string; description?: string; permissions: string[] }) =>
+      adminApi.createRole(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       message.success('Role created successfully');
@@ -61,19 +33,8 @@ export default function RolesPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Role> }) => {
-      const response = await fetch(`/api/v1/admin/roles/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: JSON.stringify(data),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to update role');
-      return result.data;
-    },
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; description?: string; permissions?: string[] } }) =>
+      adminApi.updateRole(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       message.success('Role updated successfully');
@@ -86,18 +47,7 @@ export default function RolesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/v1/admin/roles/${id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to delete role');
-      }
-    },
+    mutationFn: (id: string) => adminApi.deleteRole(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       message.success('Role deleted successfully');
@@ -218,7 +168,16 @@ export default function RolesPage() {
             setEditModalVisible(false);
             setEditingRole(null);
           }}
-          onSuccess={(data) => updateMutation.mutate({ id: editingRole.id, data })}
+          onSuccess={(data: { name: string; description?: string; permissions: string[] }) => {
+            updateMutation.mutate({ 
+              id: editingRole.id, 
+              data: { 
+                name: data.name, 
+                description: data.description, 
+                permissions: data.permissions 
+              } 
+            });
+          }}
           loading={updateMutation.isPending}
         />
       )}
@@ -317,7 +276,7 @@ function EditRoleModal({
   visible: boolean;
   role: Role;
   onCancel: () => void;
-  onSuccess: (data: Partial<Role>) => void;
+  onSuccess: (data: { name: string; description?: string; permissions: string[] }) => void;
   loading: boolean;
 }) {
   const [formData, setFormData] = useState({

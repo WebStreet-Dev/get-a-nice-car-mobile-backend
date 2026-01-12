@@ -274,6 +274,20 @@ model AppointmentReminder {
   @@map("appointment_reminders")
 }
 
+model SalesPerson {
+  id          String   @id @default(uuid())
+  name        String
+  phone       String
+  email       String
+  photoPath   String   @map("photo_path")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("sales_persons")
+}
+
 
 
 

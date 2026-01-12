@@ -3,6 +3,7 @@ import prisma from './prisma.service.js';
 import { NotFoundError } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
 import config from '../config/index.js';
+import webSocketService from './websocket.service.js';
 
 // Firebase admin for push notifications
 let firebaseAdmin: typeof import('firebase-admin') | null = null;
@@ -60,6 +61,16 @@ export class AdminNotificationService {
     });
 
     logger.info('Admin notification created', { notificationId: notification.id, type: data.type });
+
+    // Emit WebSocket notification to connected admins
+    webSocketService.emitAdminNotification({
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      data: notification.data as Record<string, unknown> | undefined,
+      createdAt: notification.createdAt.toISOString(),
+    });
 
     // Send push notification to all admins
     if (data.sendPush !== false) {

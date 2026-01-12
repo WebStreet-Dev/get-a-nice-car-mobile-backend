@@ -600,6 +600,43 @@ export class AdminController {
     }
   }
 
+  /**
+   * Approve breakdown request
+   * PUT /api/v1/admin/breakdown/:id/approve
+   */
+  async approveBreakdown(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { assignedTo } = req.body;
+      const request = await breakdownService.approveBreakdown(id, assignedTo);
+      sendSuccess(res, request, 'Breakdown request approved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reject breakdown request
+   * PUT /api/v1/admin/breakdown/:id/reject
+   */
+  async rejectBreakdown(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const request = await breakdownService.rejectBreakdown(id);
+      sendSuccess(res, request, 'Breakdown request rejected successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ==================== NOTIFICATIONS ====================
 
   /**

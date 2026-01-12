@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Input, Tag, Button, Space, Typography, message, Tabs, Modal, Input as AntInput } from 'antd';
-import { SearchOutlined, UserAddOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { Table, Input, Tag, Button, Space, Typography, message, Tabs, Modal } from 'antd';
+import { SearchOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { adminApi } from '../services/api';
 import type { User } from '../types';
 
 const { Title, Text } = Typography;
-
-const { Title, Text } = Typography;
-const { TextArea } = AntInput;
+const { TextArea } = Input;
 
 export default function UsersPage() {
   const [page, setPage] = useState(1);
@@ -19,70 +17,59 @@ export default function UsersPage() {
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [createUserModalVisible, setCreateUserModalVisible] = useState(false);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['users', page, search],
-    queryFn: () => adminApi.getUsers({ page, limit: 10, search: search || undefined }),
+    queryKey: ['clients', page, search],
+    queryFn: () => adminApi.getClients({ page, limit: 10, search: search || undefined }),
     enabled: activeTab === 'all',
   });
 
   const { data: pendingData, isLoading: pendingLoading } = useQuery({
-    queryKey: ['pendingUsers', pendingPage],
-    queryFn: () => adminApi.getPendingUsers({ page: pendingPage, limit: 10 }),
+    queryKey: ['pendingClients', pendingPage],
+    queryFn: () => adminApi.getPendingClients({ page: pendingPage, limit: 10 }),
     enabled: activeTab === 'pending',
   });
 
   const toggleMutation = useMutation({
-    mutationFn: adminApi.toggleUserStatus,
+    mutationFn: adminApi.toggleClientStatus,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      message.success('User status updated');
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      message.success('Client status updated');
     },
     onError: () => {
-      message.error('Failed to update user status');
+      message.error('Failed to update client status');
     },
   });
 
   const approveMutation = useMutation({
-    mutationFn: adminApi.approveUser,
+    mutationFn: adminApi.approveClient,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.invalidateQueries({ queryKey: ['pendingUsers'] });
-      message.success('User approved successfully');
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingClients'] });
+      message.success('Client approved successfully');
     },
     onError: () => {
-      message.error('Failed to approve user');
+      message.error('Failed to approve client');
     },
   });
 
   const rejectMutation = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) => adminApi.rejectUser(id, reason),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => adminApi.rejectClient(id, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.invalidateQueries({ queryKey: ['pendingUsers'] });
-      message.success('User rejected');
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingClients'] });
+      message.success('Client rejected');
       setRejectModalVisible(false);
       setRejectReason('');
       setRejectingUserId(null);
     },
     onError: () => {
-      message.error('Failed to reject user');
+      message.error('Failed to reject client');
     },
   });
 
-  const createUserMutation = useMutation({
-    mutationFn: adminApi.createInternalUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      message.success('Internal user created successfully');
-      setCreateUserModalVisible(false);
-    },
-    onError: () => {
-      message.error('Failed to create user');
-    },
-  });
+  // Remove create user mutation - employees are created separately
 
   const columns = [
     {
@@ -209,24 +196,17 @@ export default function UsersPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={3}>Users</Title>
+        <Title level={3}>Clients</Title>
         <Space>
           {activeTab === 'all' && (
             <Input
-              placeholder="Search users..."
+              placeholder="Search clients..."
               prefix={<SearchOutlined />}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ width: 250 }}
             />
           )}
-          <Button
-            type="primary"
-            icon={<UserAddOutlined />}
-            onClick={() => setCreateUserModalVisible(true)}
-          >
-            Create Internal User
-          </Button>
         </Space>
       </div>
 
@@ -236,7 +216,7 @@ export default function UsersPage() {
         items={[
           {
             key: 'all',
-            label: 'All Users',
+            label: 'All Clients',
             children: (
               <Table
                 columns={columns}
@@ -248,7 +228,7 @@ export default function UsersPage() {
                   total: data?.pagination.total,
                   pageSize: 10,
                   onChange: setPage,
-                  showTotal: (total) => `Total ${total} users`,
+                  showTotal: (total) => `Total ${total} clients`,
                 }}
               />
             ),
@@ -267,7 +247,7 @@ export default function UsersPage() {
                   total: pendingData?.pagination.total,
                   pageSize: 10,
                   onChange: setPendingPage,
-                  showTotal: (total) => `Total ${total} pending users`,
+                  showTotal: (total) => `Total ${total} pending clients`,
                 }}
               />
             ),
@@ -275,9 +255,9 @@ export default function UsersPage() {
         ]}
       />
 
-      {/* Reject User Modal */}
+      {/* Reject Client Modal */}
       <Modal
-        title="Reject User"
+        title="Reject Client"
         open={rejectModalVisible}
         onOk={() => {
           if (rejectingUserId && rejectReason.trim()) {
@@ -295,7 +275,7 @@ export default function UsersPage() {
         okButtonProps={{ danger: true }}
       >
         <div>
-          <Text>Please provide a reason for rejecting this user:</Text>
+          <Text>Please provide a reason for rejecting this client:</Text>
           <TextArea
             rows={4}
             value={rejectReason}
@@ -306,122 +286,7 @@ export default function UsersPage() {
         </div>
       </Modal>
 
-      {/* Create Internal User Modal */}
-      <CreateUserModal
-        visible={createUserModalVisible}
-        onCancel={() => setCreateUserModalVisible(false)}
-        onSuccess={() => {
-          setCreateUserModalVisible(false);
-          queryClient.invalidateQueries({ queryKey: ['users'] });
-        }}
-        mutation={createUserMutation}
-      />
     </div>
-  );
-}
-
-// Create User Modal Component
-function CreateUserModal({
-  visible,
-  onCancel,
-  onSuccess,
-  mutation,
-}: {
-  visible: boolean;
-  onCancel: () => void;
-  onSuccess: () => void;
-  mutation: any;
-}) {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    role: 'USER',
-    customRoleId: undefined as string | undefined,
-  });
-
-  const handleSubmit = () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.password) {
-      message.warning('Please fill in all required fields');
-      return;
-    }
-
-    mutation.mutate(formData, {
-      onSuccess: () => {
-        message.success('User created successfully');
-        setFormData({
-          name: '',
-          email: '',
-          phone: '',
-          password: '',
-          role: 'USER',
-          customRoleId: undefined,
-        });
-        onSuccess();
-      },
-    });
-  };
-
-  return (
-    <Modal
-      title="Create Internal User"
-      open={visible}
-      onOk={handleSubmit}
-      onCancel={onCancel}
-      okText="Create"
-      okButtonProps={{ loading: mutation.isPending }}
-      width={600}
-    >
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
-        <div>
-          <Text strong>Name *</Text>
-          <AntInput
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Enter full name"
-            style={{ marginTop: 8 }}
-          />
-        </div>
-        <div>
-          <Text strong>Email *</Text>
-          <AntInput
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder="Enter email address"
-            style={{ marginTop: 8 }}
-          />
-        </div>
-        <div>
-          <Text strong>Phone *</Text>
-          <AntInput
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            placeholder="Enter phone number"
-            style={{ marginTop: 8 }}
-          />
-        </div>
-        <div>
-          <Text strong>Role *</Text>
-          <AntInput
-            value={formData.role}
-            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-            placeholder="USER, ADMIN, or SUPER_ADMIN"
-            style={{ marginTop: 8 }}
-          />
-        </div>
-        <div>
-          <Text strong>Password *</Text>
-          <AntInput.Password
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            placeholder="Enter password"
-            style={{ marginTop: 8 }}
-          />
-        </div>
-      </Space>
-    </Modal>
   );
 }
 

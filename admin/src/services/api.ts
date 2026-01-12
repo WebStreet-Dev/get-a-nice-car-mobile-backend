@@ -9,6 +9,8 @@ import type {
   FAQ,
   BreakdownRequest,
   DashboardStats,
+  AdminNotification,
+  Role,
 } from '../types';
 
 const API_URL = '/api/v1';
@@ -95,30 +97,66 @@ export const adminApi = {
     return response.data.data!;
   },
 
-  // Users
-  getUsers: async (params: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<User>> => {
-    const response = await api.get<PaginatedResponse<User>>('/admin/users', { params });
+  // Clients (formerly Users)
+  getClients: async (params: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<User>> => {
+    const response = await api.get<PaginatedResponse<User>>('/admin/clients', { params });
     return response.data;
+  },
+  getPendingClients: async (params: { page?: number; limit?: number }): Promise<PaginatedResponse<User>> => {
+    const response = await api.get<PaginatedResponse<User>>('/admin/clients/pending', { params });
+    return response.data;
+  },
+  approveClient: async (id: string): Promise<User> => {
+    const response = await api.put<ApiResponse<User>>(`/admin/clients/${id}/approve`);
+    return response.data.data!;
+  },
+  rejectClient: async (id: string, reason: string): Promise<User> => {
+    const response = await api.put<ApiResponse<User>>(`/admin/clients/${id}/reject`, { reason });
+    return response.data.data!;
+  },
+  toggleClientStatus: async (id: string): Promise<User> => {
+    const response = await api.put<ApiResponse<User>>(`/admin/clients/${id}/toggle-status`);
+    return response.data.data!;
+  },
+  // Legacy methods for backward compatibility
+  getUsers: async (params: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<User>> => {
+    return adminApi.getClients(params);
   },
   getPendingUsers: async (params: { page?: number; limit?: number }): Promise<PaginatedResponse<User>> => {
-    const response = await api.get<PaginatedResponse<User>>('/admin/users/pending', { params });
-    return response.data;
+    return adminApi.getPendingClients(params);
   },
   approveUser: async (id: string): Promise<User> => {
-    const response = await api.put<ApiResponse<User>>(`/admin/users/${id}/approve`);
-    return response.data.data!;
+    return adminApi.approveClient(id);
   },
   rejectUser: async (id: string, reason: string): Promise<User> => {
-    const response = await api.put<ApiResponse<User>>(`/admin/users/${id}/reject`, { reason });
-    return response.data.data!;
-  },
-  createInternalUser: async (data: { name: string; email: string; phone: string; password: string; role: string; customRoleId?: string }): Promise<User> => {
-    const response = await api.post<ApiResponse<User>>('/admin/users/create-internal', data);
-    return response.data.data!;
+    return adminApi.rejectClient(id, reason);
   },
   toggleUserStatus: async (id: string): Promise<User> => {
-    const response = await api.put<ApiResponse<User>>(`/admin/users/${id}/toggle-status`);
+    return adminApi.toggleClientStatus(id);
+  },
+  // Employees
+  getEmployees: async (params: { page?: number; limit?: number; search?: string }): Promise<PaginatedResponse<User>> => {
+    const response = await api.get<PaginatedResponse<User>>('/admin/employees', { params });
+    return response.data;
+  },
+  createEmployee: async (data: { name: string; email: string; phone: string; password: string; role: string; customRoleId?: string }): Promise<User> => {
+    const response = await api.post<ApiResponse<User>>('/admin/employees', data);
     return response.data.data!;
+  },
+  updateEmployee: async (id: string, data: { name?: string; email?: string; phone?: string }): Promise<User> => {
+    const response = await api.put<ApiResponse<User>>(`/admin/employees/${id}`, data);
+    return response.data.data!;
+  },
+  toggleEmployeeStatus: async (id: string): Promise<User> => {
+    const response = await api.put<ApiResponse<User>>(`/admin/employees/${id}/toggle-status`);
+    return response.data.data!;
+  },
+  deleteEmployee: async (id: string): Promise<void> => {
+    await api.delete(`/admin/employees/${id}`);
+  },
+  // Legacy method
+  createInternalUser: async (data: { name: string; email: string; phone: string; password: string; role: string; customRoleId?: string }): Promise<User> => {
+    return adminApi.createEmployee(data);
   },
 
   // Appointments
@@ -178,8 +216,16 @@ export const adminApi = {
     const response = await api.get<PaginatedResponse<BreakdownRequest>>('/admin/breakdown', { params });
     return response.data;
   },
-  updateBreakdownStatus: async (id: string, status: string): Promise<BreakdownRequest> => {
-    const response = await api.put<ApiResponse<BreakdownRequest>>(`/admin/breakdown/${id}/status`, { status });
+  updateBreakdownStatus: async (id: string, status: string, assignedTo?: string): Promise<BreakdownRequest> => {
+    const response = await api.put<ApiResponse<BreakdownRequest>>(`/admin/breakdown/${id}/status`, { status, assignedTo });
+    return response.data.data!;
+  },
+  approveBreakdown: async (id: string, assignedTo?: string): Promise<BreakdownRequest> => {
+    const response = await api.put<ApiResponse<BreakdownRequest>>(`/admin/breakdown/${id}/approve`, { assignedTo });
+    return response.data.data!;
+  },
+  rejectBreakdown: async (id: string): Promise<BreakdownRequest> => {
+    const response = await api.put<ApiResponse<BreakdownRequest>>(`/admin/breakdown/${id}/reject`, {});
     return response.data.data!;
   },
 
@@ -187,6 +233,44 @@ export const adminApi = {
   sendBroadcast: async (data: { title: string; body: string; type: string }): Promise<{ sent: number; failed: number }> => {
     const response = await api.post<ApiResponse<{ sent: number; failed: number }>>('/admin/notifications/broadcast', data);
     return response.data.data!;
+  },
+
+  // Admin Notifications (Alerts)
+  getAdminNotifications: async (params: { page?: number; limit?: number; unreadOnly?: boolean }): Promise<{ notifications: AdminNotification[]; total: number; unreadCount: number }> => {
+    const response = await api.get<ApiResponse<{ notifications: AdminNotification[]; total: number; unreadCount: number }>>('/admin/alerts', { params });
+    return response.data.data!;
+  },
+  markAdminNotificationRead: async (id: string): Promise<AdminNotification> => {
+    const response = await api.put<ApiResponse<AdminNotification>>(`/admin/alerts/${id}/read`, {});
+    return response.data.data!;
+  },
+  markAllAdminNotificationsRead: async (): Promise<void> => {
+    await api.put('/admin/alerts/read-all', {});
+  },
+  getAdminNotificationUnreadCount: async (): Promise<number> => {
+    const response = await api.get<ApiResponse<{ notifications: AdminNotification[]; total: number; unreadCount: number }>>('/admin/alerts', { params: { page: 1, limit: 1, unreadOnly: true } });
+    return response.data.data!.unreadCount;
+  },
+
+  // Roles
+  getRoles: async (): Promise<Role[]> => {
+    const response = await api.get<ApiResponse<Role[]>>('/admin/roles');
+    return response.data.data!;
+  },
+  getRoleById: async (id: string): Promise<Role> => {
+    const response = await api.get<ApiResponse<Role>>(`/admin/roles/${id}`);
+    return response.data.data!;
+  },
+  createRole: async (data: { name: string; description?: string; permissions: string[] }): Promise<Role> => {
+    const response = await api.post<ApiResponse<Role>>('/admin/roles', data);
+    return response.data.data!;
+  },
+  updateRole: async (id: string, data: { name?: string; description?: string; permissions?: string[] }): Promise<Role> => {
+    const response = await api.put<ApiResponse<Role>>(`/admin/roles/${id}`, data);
+    return response.data.data!;
+  },
+  deleteRole: async (id: string): Promise<void> => {
+    await api.delete(`/admin/roles/${id}`);
   },
 };
 

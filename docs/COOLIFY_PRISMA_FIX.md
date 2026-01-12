@@ -90,3 +90,4 @@ Since the database is **already in sync**, you just need to:
 1. **Check if your app is working** - Try accessing the API endpoints
 2. **If it's working**, no action needed - Prisma Client is already generated
 3. **If it's not working**, restart the container in Coolify to regenerate during build
+

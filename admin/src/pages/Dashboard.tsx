@@ -74,8 +74,8 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={8}>
           <Card>
             <Statistic
-              title="Total Users"
-              value={stats?.totalUsers || 0}
+              title="Total Clients"
+              value={stats?.totalClients || stats?.totalUsers || 0}
               prefix={<UserOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
@@ -143,6 +143,10 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+
+
+
 
 
 
