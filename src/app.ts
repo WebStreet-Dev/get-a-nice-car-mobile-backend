@@ -28,6 +28,7 @@ import breakdownRoutes from './routes/breakdown.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import downpaymentRoutes from './routes/downpayment.routes.js';
 import salesPersonRoutes from './routes/sales-person.routes.js';
+import locationRoutes from './routes/location.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 
@@ -113,6 +114,7 @@ app.use('/api/v1/breakdown', breakdownRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/downpayment', downpaymentRoutes);
 app.use('/api/v1/sales-persons', salesPersonRoutes);
+app.use('/api/v1/locations', locationRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 
 // Admin routes - log registration

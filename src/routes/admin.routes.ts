@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import adminController from '../controllers/admin.controller.js';
 import downpaymentController from '../controllers/downpayment.controller.js';
+import locationController from '../controllers/location.controller.js';
 import roleController from '../controllers/role.controller.js';
 import salesPersonController from '../controllers/sales-person.controller.js';
 import { authenticate, adminOnly } from '../middleware/auth.js';
@@ -9,6 +10,10 @@ import {
   createDownpaymentCategorySchema,
   updateDownpaymentCategorySchema,
 } from '../validators/downpayment.validator.js';
+import {
+  createLocationSchema,
+  updateLocationSchema,
+} from '../validators/location.validator.js';
 import logger from '../utils/logger.js';
 
 // Controllers should be loaded at this point
@@ -423,6 +428,51 @@ router.put('/sales-persons/:id', salesPersonController.update.bind(salesPersonCo
  * @access  Admin
  */
 router.delete('/sales-persons/:id', salesPersonController.delete.bind(salesPersonController));
+
+// ==================== LOCATIONS ====================
+
+/**
+ * @route   GET /api/v1/admin/locations
+ * @desc    Get all locations (including inactive)
+ * @access  Admin
+ */
+router.get('/locations', locationController.getAll.bind(locationController));
+
+/**
+ * @route   POST /api/v1/admin/locations
+ * @desc    Create location
+ * @access  Admin
+ */
+router.post(
+  '/locations',
+  validate(createLocationSchema),
+  locationController.create.bind(locationController)
+);
+
+/**
+ * @route   PUT /api/v1/admin/locations/:id
+ * @desc    Update location
+ * @access  Admin
+ */
+router.put(
+  '/locations/:id',
+  validate(updateLocationSchema),
+  locationController.update.bind(locationController)
+);
+
+/**
+ * @route   PUT /api/v1/admin/locations/:id/toggle
+ * @desc    Toggle location status
+ * @access  Admin
+ */
+router.put('/locations/:id/toggle', locationController.toggleStatus.bind(locationController));
+
+/**
+ * @route   DELETE /api/v1/admin/locations/:id
+ * @desc    Delete location
+ * @access  Admin
+ */
+router.delete('/locations/:id', locationController.delete.bind(locationController));
 
 export default router;
 

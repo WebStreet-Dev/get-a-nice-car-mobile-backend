@@ -288,6 +288,19 @@ model SalesPerson {
   @@map("sales_persons")
 }
 
+model Location {
+  id             String   @id @default(uuid())
+  name           String
+  address        String
+  googleMapsLink String?  @map("google_maps_link")
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("locations")
+}
+
 
 
 
