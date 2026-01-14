@@ -1,20 +1,19 @@
 import { z } from 'zod';
 
 export const createLocationSchema = z.object({
-  name: z
+  label: z
     .string()
-    .min(1, 'Name is required')
-    .max(200, 'Name must be less than 200 characters'),
+    .min(1, 'Label is required')
+    .max(100, 'Label must be less than 100 characters'),
   address: z
     .string()
     .min(1, 'Address is required')
     .max(500, 'Address must be less than 500 characters'),
-  googleMapsLink: z
+  mapLink: z
     .string()
-    .url('Invalid URL format')
-    .optional()
-    .nullable(),
-  sortOrder: z
+    .url('Invalid map link URL format')
+    .max(1000, 'Map link must be less than 1000 characters'),
+  displayOrder: z
     .number()
     .int()
     .min(0)
@@ -25,22 +24,22 @@ export const createLocationSchema = z.object({
 });
 
 export const updateLocationSchema = z.object({
-  name: z
+  label: z
     .string()
-    .min(1, 'Name is required')
-    .max(200, 'Name must be less than 200 characters')
+    .min(1, 'Label is required')
+    .max(100, 'Label must be less than 100 characters')
     .optional(),
   address: z
     .string()
     .min(1, 'Address is required')
     .max(500, 'Address must be less than 500 characters')
     .optional(),
-  googleMapsLink: z
+  mapLink: z
     .string()
-    .url('Invalid URL format')
-    .optional()
-    .nullable(),
-  sortOrder: z
+    .url('Invalid map link URL format')
+    .max(1000, 'Map link must be less than 1000 characters')
+    .optional(),
+  displayOrder: z
     .number()
     .int()
     .min(0)

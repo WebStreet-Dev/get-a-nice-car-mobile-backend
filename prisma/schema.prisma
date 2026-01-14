@@ -289,16 +289,17 @@ model SalesPerson {
 }
 
 model Location {
-  id             String   @id @default(uuid())
-  name           String
-  address        String
-  googleMapsLink String?  @map("google_maps_link")
-  sortOrder      Int      @default(0) @map("sort_order")
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(uuid())
+  label       String   // e.g., "Main Location", "Second location"
+  address     String
+  mapLink     String   @map("map_link") // Google Maps or other map URL
+  displayOrder Int     @default(0) @map("display_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("locations")
+  @@index([displayOrder])
 }
 
 

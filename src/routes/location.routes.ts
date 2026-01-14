@@ -1,20 +1,52 @@
 import { Router } from 'express';
 import locationController from '../controllers/location.controller.js';
+import { authenticate, adminOnly } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
+import {
+  createLocationSchema,
+  updateLocationSchema,
+  locationIdSchema,
+} from '../validators/location.validator.js';
 
 const router = Router();
 
-/**
- * @route   GET /api/v1/locations
- * @desc    Get all active locations
- * @access  Public
- */
-router.get('/', locationController.getActive.bind(locationController));
+// Public routes - Get all locations (active only for public)
+router.get(
+  '/',
+  locationController.getAll.bind(locationController)
+);
 
-/**
- * @route   GET /api/v1/locations/:id
- * @desc    Get location by ID
- * @access  Public
- */
-router.get('/:id', locationController.getById.bind(locationController));
+// Public route - Get location by ID
+router.get(
+  '/:id',
+  validate(locationIdSchema, 'params'),
+  locationController.getById.bind(locationController)
+);
+
+// Protected admin routes - require authentication and admin role
+router.use(authenticate);
+router.use(adminOnly);
+
+// Create location
+router.post(
+  '/',
+  validate(createLocationSchema),
+  locationController.create.bind(locationController)
+);
+
+// Update location
+router.put(
+  '/:id',
+  validate(locationIdSchema, 'params'),
+  validate(updateLocationSchema),
+  locationController.update.bind(locationController)
+);
+
+// Delete location
+router.delete(
+  '/:id',
+  validate(locationIdSchema, 'params'),
+  locationController.delete.bind(locationController)
+);
 
 export default router;

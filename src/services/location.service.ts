@@ -5,21 +5,21 @@ import logger from '../utils/logger.js';
 
 export class LocationService {
   /**
-   * Get all active locations (public)
+   * Get all locations
    */
-  async getActiveLocations(): Promise<Location[]> {
+  async getAllLocations(): Promise<Location[]> {
     return prisma.location.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { displayOrder: 'asc' },
     });
   }
 
   /**
-   * Get all locations including inactive (admin)
+   * Get active locations only
    */
-  async getAllLocations(): Promise<Location[]> {
+  async getActiveLocations(): Promise<Location[]> {
     return prisma.location.findMany({
-      orderBy: { sortOrder: 'asc' },
+      where: { isActive: true },
+      orderBy: { displayOrder: 'asc' },
     });
   }
 
@@ -39,21 +39,21 @@ export class LocationService {
   }
 
   /**
-   * Create a new location (admin)
+   * Create a location
    */
   async createLocation(data: {
-    name: string;
+    label: string;
     address: string;
-    googleMapsLink?: string | null;
-    sortOrder?: number;
+    mapLink: string;
+    displayOrder?: number;
     isActive?: boolean;
   }): Promise<Location> {
     const location = await prisma.location.create({
       data: {
-        name: data.name,
+        label: data.label,
         address: data.address,
-        googleMapsLink: data.googleMapsLink || null,
-        sortOrder: data.sortOrder || 0,
+        mapLink: data.mapLink,
+        displayOrder: data.displayOrder || 0,
         isActive: data.isActive ?? true,
       },
     });
@@ -64,15 +64,15 @@ export class LocationService {
   }
 
   /**
-   * Update a location (admin)
+   * Update a location
    */
   async updateLocation(
     id: string,
     data: {
-      name?: string;
+      label?: string;
       address?: string;
-      googleMapsLink?: string | null;
-      sortOrder?: number;
+      mapLink?: string;
+      displayOrder?: number;
       isActive?: boolean;
     }
   ): Promise<Location> {
@@ -95,7 +95,7 @@ export class LocationService {
   }
 
   /**
-   * Delete a location (admin)
+   * Delete a location
    */
   async deleteLocation(id: string): Promise<void> {
     const existing = await prisma.location.findUnique({
@@ -111,28 +111,6 @@ export class LocationService {
     });
 
     logger.info('Location deleted', { locationId: id });
-  }
-
-  /**
-   * Toggle location active status (admin)
-   */
-  async toggleLocationStatus(id: string): Promise<Location> {
-    const existing = await prisma.location.findUnique({
-      where: { id },
-    });
-
-    if (!existing) {
-      throw new NotFoundError('Location');
-    }
-
-    const location = await prisma.location.update({
-      where: { id },
-      data: { isActive: !existing.isActive },
-    });
-
-    logger.info('Location status toggled', { locationId: id, isActive: location.isActive });
-
-    return location;
   }
 }
 
