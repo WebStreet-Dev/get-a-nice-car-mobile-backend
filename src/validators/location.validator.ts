@@ -11,8 +11,12 @@ export const createLocationSchema = z.object({
     .max(500, 'Address must be less than 500 characters'),
   mapLink: z
     .string()
-    .url('Invalid map link URL format')
-    .max(1000, 'Map link must be less than 1000 characters'),
+    .max(1000, 'Map link must be less than 1000 characters')
+    .refine(
+      (val) => val === '' || z.string().url().safeParse(val).success,
+      { message: 'Invalid map link URL format' }
+    )
+    .optional(),
   displayOrder: z
     .number()
     .int()
@@ -36,8 +40,11 @@ export const updateLocationSchema = z.object({
     .optional(),
   mapLink: z
     .string()
-    .url('Invalid map link URL format')
     .max(1000, 'Map link must be less than 1000 characters')
+    .refine(
+      (val) => val === '' || z.string().url().safeParse(val).success,
+      { message: 'Invalid map link URL format' }
+    )
     .optional(),
   displayOrder: z
     .number()
