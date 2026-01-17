@@ -53,8 +53,15 @@ export class AuthService {
   verifyAccessToken(token: string): TokenPayload {
     try {
       return jwt.verify(token, config.jwt.secret) as TokenPayload;
-    } catch (error) {
-      throw new UnauthorizedError('Invalid or expired token');
+    } catch (error: any) {
+      // Preserve JWT error details for better error handling
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedError('Token expired');
+      } else if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedError('Invalid token');
+      } else {
+        throw new UnauthorizedError('Invalid or expired token');
+      }
     }
   }
 
@@ -64,8 +71,15 @@ export class AuthService {
   verifyRefreshToken(token: string): TokenPayload {
     try {
       return jwt.verify(token, config.jwt.refreshSecret) as TokenPayload;
-    } catch (error) {
-      throw new UnauthorizedError('Invalid or expired refresh token');
+    } catch (error: any) {
+      // Preserve JWT error details for better error handling
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedError('Refresh token expired');
+      } else if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedError('Invalid refresh token');
+      } else {
+        throw new UnauthorizedError('Invalid or expired refresh token');
+      }
     }
   }
 
