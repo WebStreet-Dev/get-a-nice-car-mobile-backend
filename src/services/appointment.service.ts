@@ -6,6 +6,8 @@ import adminNotificationService from './admin-notification.service.js';
 import notificationService from './notification.service.js';
 import vcitaService from './vcita.service.js';
 import appointmentReminderService from './appointment-reminder.service.js';
+import emailService from './email.service.js';
+import emailTemplateService from './email-template.service.js';
 
 export class AppointmentService {
   /**
@@ -77,6 +79,16 @@ export class AppointmentService {
     }).catch((err) => {
       logger.error('Failed to send appointment notification', { error: err });
     });
+
+    // Send email notification for Service department appointments
+    if (this.isServiceDepartment(appointment.department.name) && appointment.department.email) {
+      this.sendServiceAppointmentEmail(appointment).catch((err) => {
+        logger.error('Failed to send service appointment email', {
+          appointmentId: appointment.id,
+          error: err,
+        });
+      });
+    }
 
     // Schedule reminders (will be sent when appointment is approved)
     // Reminders are scheduled when appointment status changes to CONFIRMED
@@ -399,6 +411,84 @@ export class AppointmentService {
    */
   async approveAppointment(appointmentId: string): Promise<Appointment> {
     return this.updateAppointmentStatus(appointmentId, AppointmentStatus.CONFIRMED);
+  }
+
+  /**
+   * Check if department is Service
+   */
+  private isServiceDepartment(departmentName: string): boolean {
+    return departmentName.toLowerCase() === 'service';
+  }
+
+  /**
+   * Send email notification for Service department appointments
+   * 
+   * TODO: TESTING MODE - Using hardcoded email for testing
+   * Once confirmed working, change USE_TEST_EMAIL to false to use database email
+   */
+  private async sendServiceAppointmentEmail(
+    appointment: Appointment & {
+      department: { name: string; email: string };
+      user: { name: string };
+    }
+  ): Promise<void> {
+    if (!emailService.isAvailable()) {
+      logger.warn('Email service not available, skipping service appointment email');
+      return;
+    }
+
+    // TESTING: Use hardcoded email for testing
+    // Set to false once testing is complete to use database email
+    const USE_TEST_EMAIL = true;
+    const TEST_EMAIL = 'isururox218@gmail.com';
+
+    // Determine recipient email
+    let recipientEmail: string;
+    if (USE_TEST_EMAIL) {
+      recipientEmail = TEST_EMAIL;
+      logger.info('Using test email for service appointment', {
+        testEmail: TEST_EMAIL,
+        originalEmail: appointment.department.email,
+      });
+    } else {
+      if (!appointment.department.email) {
+        logger.warn('Service department has no email address configured', {
+          departmentId: appointment.department.name,
+        });
+        return;
+      }
+      recipientEmail = appointment.department.email;
+    }
+
+    try {
+      // Generate email template
+      const { html, text } = emailTemplateService.generateServiceAppointmentEmail({
+        appointment,
+      });
+
+      // Get customer name for subject
+      const customerName = appointment.contactName || appointment.user.name || 'Customer';
+
+      // Send email
+      await emailService.sendEmail(
+        recipientEmail,
+        `New Service Appointment Request - ${customerName}`,
+        html,
+        text
+      );
+
+      logger.info('Service appointment email sent successfully', {
+        appointmentId: appointment.id,
+        to: recipientEmail,
+        isTestEmail: USE_TEST_EMAIL,
+      });
+    } catch (error: any) {
+      logger.error('Failed to send service appointment email', {
+        appointmentId: appointment.id,
+        error: error.message,
+      });
+      // Don't throw - email failure shouldn't prevent appointment creation
+    }
   }
 
   /**

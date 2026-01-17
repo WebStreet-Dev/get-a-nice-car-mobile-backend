@@ -50,13 +50,19 @@ FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@getanicecar.iam.gserviceaccount.co
 **Important:** For `FIREBASE_PRIVATE_KEY`, keep the `\n` characters as they are (they represent newlines).
 
 ### SMTP Configuration (Optional - for emails)
+**For Hostinger hosting:**
 ```env
 SMTP_FROM=noreply@getanicecar.com
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your_smtp_username
-SMTP_PASS=your_smtp_password
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=465
+SMTP_USER=your_full_email@yourdomain.com
+SMTP_PASS=your_email_password
 ```
+
+**Note:** 
+- Port 465 uses SSL/TLS (recommended for Hostinger)
+- Port 587 uses TLS/STARTTLS (alternative if 465 doesn't work)
+- Username must be the full email address
 
 ## What Gets Deployed
 
