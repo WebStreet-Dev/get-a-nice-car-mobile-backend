@@ -46,12 +46,18 @@ export class UserService {
    * Update FCM token for push notifications
    */
   async updateFcmToken(userId: string, fcmToken: string): Promise<void> {
-    await prisma.user.update({
+    const user = await prisma.user.update({
       where: { id: userId },
       data: { fcmToken },
+      select: { email: true, role: true },
     });
 
-    logger.info('FCM token updated', { userId });
+    logger.info('FCM token updated', { 
+      userId, 
+      email: user.email, 
+      role: user.role,
+      tokenPrefix: fcmToken.substring(0, 20) + '...' 
+    });
   }
 
   /**

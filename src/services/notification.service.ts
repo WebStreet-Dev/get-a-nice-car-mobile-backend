@@ -174,7 +174,9 @@ export class NotificationService {
         android: {
           priority: 'high',
           notification: {
-            channelId: 'default',
+            channelId: 'high_importance_channel',
+            sound: 'default',
+            priority: 'high',
           },
         },
         apns: {
@@ -182,6 +184,7 @@ export class NotificationService {
             aps: {
               sound: 'default',
               badge: 1,
+              'content-available': 1,
             },
           },
         },

@@ -17,7 +17,13 @@ async function getFirebaseAdmin() {
     
     if (!admin.default.apps.length) {
       // Use config-based credentials (same as notification.service.ts)
-      if (config.firebase.projectId && config.firebase.privateKey && config.firebase.clientEmail) {
+      const hasProjectId = !!config.firebase.projectId;
+      const hasPrivateKey = !!config.firebase.privateKey;
+      const hasClientEmail = !!config.firebase.clientEmail;
+      
+      logger.info('Firebase credentials check', { hasProjectId, hasPrivateKey, hasClientEmail });
+      
+      if (hasProjectId && hasPrivateKey && hasClientEmail) {
         admin.default.initializeApp({
           credential: admin.default.credential.cert({
             projectId: config.firebase.projectId,
@@ -25,9 +31,13 @@ async function getFirebaseAdmin() {
             clientEmail: config.firebase.clientEmail,
           }),
         });
-        logger.info('Firebase Admin SDK initialized for admin notifications');
+        logger.info('Firebase Admin SDK initialized for admin notifications', { projectId: config.firebase.projectId });
       } else {
-        logger.warn('Firebase credentials not configured - admin push notifications disabled');
+        logger.warn('Firebase credentials not configured - admin push notifications disabled', {
+          hasProjectId,
+          hasPrivateKey: hasPrivateKey ? 'yes (length: ' + config.firebase.privateKey.length + ')' : 'no',
+          hasClientEmail,
+        });
         return null;
       }
     }
@@ -35,7 +45,7 @@ async function getFirebaseAdmin() {
     firebaseAdmin = admin.default;
     return firebaseAdmin;
   } catch (error) {
-    logger.warn('Firebase Admin not available', { error });
+    logger.error('Firebase Admin initialization failed', { error });
     return null;
   }
 }
@@ -89,9 +99,11 @@ export class AdminNotificationService {
     data?: Record<string, unknown>
   ): Promise<void> {
     try {
+      logger.info('Attempting to send push notification to admins', { title, body });
+      
       const firebase = await getFirebaseAdmin();
       if (!firebase) {
-        logger.warn('Firebase not initialized, skipping push notification');
+        logger.warn('Firebase not initialized, skipping push notification. Check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY env vars.');
         return;
       }
 
@@ -102,7 +114,12 @@ export class AdminNotificationService {
           fcmToken: { not: null },
           isActive: true,
         },
-        select: { fcmToken: true },
+        select: { fcmToken: true, email: true, role: true },
+      });
+
+      logger.info('Found admins for push notification', { 
+        count: admins.length,
+        admins: admins.map(a => ({ email: a.email, role: a.role, hasToken: !!a.fcmToken }))
       });
 
       const tokens = admins
@@ -110,15 +127,34 @@ export class AdminNotificationService {
         .filter((token): token is string => token !== null);
 
       if (tokens.length === 0) {
-        logger.info('No admin FCM tokens found');
+        logger.warn('No admin FCM tokens found - admins need to login from the mobile app first');
         return;
       }
+      
+      logger.info('Sending FCM to tokens', { tokenCount: tokens.length });
 
       const message = {
         notification: { title, body },
         data: data ? Object.fromEntries(
           Object.entries(data).map(([k, v]) => [k, String(v)])
         ) : undefined,
+        android: {
+          priority: 'high' as const,
+          notification: {
+            channelId: 'high_importance_channel',
+            sound: 'default',
+            priority: 'high' as const,
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+              'content-available': 1,
+            },
+          },
+        },
         tokens,
       };
 
