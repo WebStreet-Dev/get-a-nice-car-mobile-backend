@@ -255,6 +255,17 @@ Please do not reply to this email.
       hour12: true,
     });
 
+    // Format date and time more compactly
+    const formattedDateTime = appointmentDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+
     const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -263,144 +274,131 @@ Please do not reply to this email.
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>New Form Submission - ${this.escapeHtml(departmentName)}</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f4;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f4f4f4;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f7fa;">
     <tr>
-      <td style="padding: 40px 20px;">
-        <table role="presentation" style="width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
+      <td style="padding: 30px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden;">
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">
+            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px 30px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700; letter-spacing: -0.3px;">
                 New Form Submission
               </h1>
-              <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">
+              <p style="margin: 8px 0 0 0; color: #ffffff; font-size: 15px; opacity: 0.95; font-weight: 500;">
                 ${this.escapeHtml(departmentName)} Department
               </p>
             </td>
           </tr>
           
-          <!-- Content -->
+          <!-- Main Content - All details in one clean layout -->
           <tr>
-            <td style="padding: 40px 30px;">
-              <p style="margin: 0 0 30px 0; color: #333333; font-size: 16px; line-height: 1.6;">
-                A new form submission has been received through the Get a Nice Car mobile application.
-              </p>
-              
-              <!-- Contact Information Section -->
-              <div style="background: linear-gradient(to right, #f8f9fa, #ffffff); padding: 25px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #667eea;">
-                <h2 style="margin: 0 0 20px 0; color: #667eea; font-size: 20px; font-weight: 600; display: flex; align-items: center;">
-                  <span style="display: inline-block; width: 8px; height: 8px; background-color: #667eea; border-radius: 50%; margin-right: 12px;"></span>
-                  Contact Information
-                </h2>
-                <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="padding: 12px 0; color: #666666; font-size: 15px; width: 140px; font-weight: 500;">Name:</td>
-                    <td style="padding: 12px 0; color: #333333; font-size: 15px; font-weight: 600;">${this.escapeHtml(contactName)}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 12px 0; color: #666666; font-size: 15px; font-weight: 500;">Email:</td>
-                    <td style="padding: 12px 0; color: #333333; font-size: 15px;">
-                      <a href="mailto:${this.escapeHtml(contactEmail)}" style="color: #667eea; text-decoration: none;">${this.escapeHtml(contactEmail)}</a>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 12px 0; color: #666666; font-size: 15px; font-weight: 500;">Phone:</td>
-                    <td style="padding: 12px 0; color: #333333; font-size: 15px;">
-                      <a href="tel:${this.escapeHtml(contactPhone)}" style="color: #667eea; text-decoration: none;">${this.escapeHtml(contactPhone)}</a>
-                    </td>
-                  </tr>
-                </table>
-              </div>
-              
-              <!-- Appointment Details Section -->
-              <div style="background: linear-gradient(to right, #f8f9fa, #ffffff); padding: 25px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #764ba2;">
-                <h2 style="margin: 0 0 20px 0; color: #764ba2; font-size: 20px; font-weight: 600; display: flex; align-items: center;">
-                  <span style="display: inline-block; width: 8px; height: 8px; background-color: #764ba2; border-radius: 50%; margin-right: 12px;"></span>
-                  Appointment Details
-                </h2>
-                <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="padding: 12px 0; color: #666666; font-size: 15px; width: 140px; font-weight: 500;">Department:</td>
-                    <td style="padding: 12px 0; color: #333333; font-size: 15px; font-weight: 600;">${this.escapeHtml(departmentName)}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 12px 0; color: #666666; font-size: 15px; font-weight: 500;">Date:</td>
-                    <td style="padding: 12px 0; color: #333333; font-size: 15px;">${formattedDate}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 12px 0; color: #666666; font-size: 15px; font-weight: 500;">Time:</td>
-                    <td style="padding: 12px 0; color: #333333; font-size: 15px;">${formattedTime}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 12px 0; color: #666666; font-size: 15px; font-weight: 500;">Status:</td>
-                    <td style="padding: 12px 0;">
-                      <span style="display: inline-block; padding: 4px 12px; background-color: #fff3cd; color: #856404; border-radius: 20px; font-size: 13px; font-weight: 600; text-transform: capitalize;">
-                        ${appointment.status.toLowerCase()}
-                      </span>
-                    </td>
-                  </tr>
-                </table>
-              </div>
-              
-              <!-- Vehicle Information Section -->
-              ${vehicleInfo && vehicleInfo !== 'Not specified' ? `
-              <div style="background: linear-gradient(to right, #f8f9fa, #ffffff); padding: 25px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #28a745;">
-                <h2 style="margin: 0 0 20px 0; color: #28a745; font-size: 20px; font-weight: 600; display: flex; align-items: center;">
-                  <span style="display: inline-block; width: 8px; height: 8px; background-color: #28a745; border-radius: 50%; margin-right: 12px;"></span>
-                  Vehicle Information
-                </h2>
-                <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="padding: 12px 0; color: #666666; font-size: 15px; width: 140px; font-weight: 500;">Vehicle:</td>
-                    <td style="padding: 12px 0; color: #333333; font-size: 15px; font-weight: 600;">${this.escapeHtml(vehicleInfo)}</td>
-                  </tr>
-                </table>
-              </div>
-              ` : ''}
-              
-              <!-- Notes/Message Section -->
-              ${appointment.notes ? `
-              <div style="background: linear-gradient(to right, #f8f9fa, #ffffff); padding: 25px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #17a2b8;">
-                <h2 style="margin: 0 0 20px 0; color: #17a2b8; font-size: 20px; font-weight: 600; display: flex; align-items: center;">
-                  <span style="display: inline-block; width: 8px; height: 8px; background-color: #17a2b8; border-radius: 50%; margin-right: 12px;"></span>
-                  Additional Notes
-                </h2>
-                <div style="background-color: #ffffff; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0;">
-                  <p style="margin: 0; color: #333333; font-size: 15px; line-height: 1.7; white-space: pre-wrap;">
-                    ${this.escapeHtml(appointment.notes)}
-                  </p>
-                </div>
-              </div>
-              ` : ''}
-              
-              <!-- Reference Information -->
-              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 30px; border: 1px dashed #dee2e6;">
-                <p style="margin: 0; color: #6c757d; font-size: 13px; line-height: 1.5;">
-                  <strong>Reference ID:</strong> ${appointment.id}<br>
-                  <strong>Submitted:</strong> ${new Date().toLocaleString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })}
-                </p>
-              </div>
+            <td style="padding: 0;">
+              <!-- Customer Info Card -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #ffffff;">
+                <tr>
+                  <td style="padding: 28px 30px 24px 30px; border-bottom: 1px solid #e8ecf0;">
+                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 0 0 20px 0;">
+                          <div style="display: inline-block; width: 48px; height: 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; text-align: center; line-height: 48px; color: #ffffff; font-size: 20px; font-weight: 600;">
+                            ${contactName.charAt(0).toUpperCase()}
+                          </div>
+                          <div style="display: inline-block; vertical-align: top; margin-left: 16px; padding-top: 4px;">
+                            <div style="color: #1a202c; font-size: 18px; font-weight: 700; line-height: 1.3; margin-bottom: 4px;">${this.escapeHtml(contactName)}</div>
+                            <div style="color: #718096; font-size: 14px;">Customer</div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 0;">
+                          <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                              <td style="padding: 12px 0; width: 50%;">
+                                <div style="color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Email</div>
+                                <a href="mailto:${this.escapeHtml(contactEmail)}" style="color: #667eea; text-decoration: none; font-size: 15px; font-weight: 500; word-break: break-word;">${this.escapeHtml(contactEmail)}</a>
+                              </td>
+                              <td style="padding: 12px 0; width: 50%;">
+                                <div style="color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Phone</div>
+                                <a href="tel:${this.escapeHtml(contactPhone)}" style="color: #667eea; text-decoration: none; font-size: 15px; font-weight: 500;">${this.escapeHtml(contactPhone)}</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Appointment Details Row -->
+                <tr>
+                  <td style="padding: 24px 30px; border-bottom: 1px solid #e8ecf0; background-color: #f8f9fa;">
+                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 0 16px 0 0; width: 33.33%;">
+                          <div style="color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Date & Time</div>
+                          <div style="color: #1a202c; font-size: 15px; font-weight: 600; line-height: 1.4;">${formattedDateTime}</div>
+                        </td>
+                        <td style="padding: 0 16px 0 0; width: 33.33%;">
+                          <div style="color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Department</div>
+                          <div style="color: #1a202c; font-size: 15px; font-weight: 600;">${this.escapeHtml(departmentName)}</div>
+                        </td>
+                        <td style="padding: 0; width: 33.33%;">
+                          <div style="color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Status</div>
+                          <span style="display: inline-block; padding: 6px 14px; background-color: #fef3c7; color: #92400e; border-radius: 20px; font-size: 13px; font-weight: 600; text-transform: capitalize;">
+                            ${appointment.status.toLowerCase()}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                ${vehicleInfo && vehicleInfo !== 'Not specified' ? `
+                <!-- Vehicle Info Row -->
+                <tr>
+                  <td style="padding: 24px 30px; border-bottom: 1px solid #e8ecf0;">
+                    <div style="color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Vehicle</div>
+                    <div style="color: #1a202c; font-size: 16px; font-weight: 600;">${this.escapeHtml(vehicleInfo)}</div>
+                  </td>
+                </tr>
+                ` : ''}
+                
+                ${appointment.notes ? `
+                <!-- Notes Row -->
+                <tr>
+                  <td style="padding: 24px 30px; border-bottom: 1px solid #e8ecf0;">
+                    <div style="color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Notes</div>
+                    <div style="color: #4a5568; font-size: 15px; line-height: 1.6; white-space: pre-wrap; background-color: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 3px solid #667eea;">
+                      ${this.escapeHtml(appointment.notes)}
+                    </div>
+                  </td>
+                </tr>
+                ` : ''}
+                
+                <!-- Reference Info -->
+                <tr>
+                  <td style="padding: 20px 30px; background-color: #f8f9fa;">
+                    <div style="color: #a0aec0; font-size: 11px; text-align: center; line-height: 1.5;">
+                      Reference ID: <span style="color: #718096; font-weight: 600;">${appointment.id}</span> • Submitted: ${new Date().toLocaleString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </div>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           
           <!-- Footer -->
           <tr>
-            <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #e0e0e0;">
-              <p style="margin: 0 0 10px 0; color: #6c757d; font-size: 14px; line-height: 1.6;">
-                This is an automated notification from the<br>
-                <strong style="color: #667eea;">Get a Nice Car</strong> mobile application.
-              </p>
-              <p style="margin: 10px 0 0 0; color: #adb5bd; font-size: 12px;">
-                Please do not reply to this email. For inquiries, please contact the customer directly.
+            <td style="background-color: #ffffff; padding: 24px 30px; text-align: center; border-top: 1px solid #e8ecf0;">
+              <p style="margin: 0; color: #a0aec0; font-size: 12px; line-height: 1.5;">
+                Automated notification from <strong style="color: #667eea;">Get a Nice Car</strong> mobile app
               </p>
             </td>
           </tr>
@@ -416,45 +414,36 @@ Please do not reply to this email.
     const text = `
 NEW FORM SUBMISSION - ${departmentName.toUpperCase()} DEPARTMENT
 
-A new form submission has been received through the Get a Nice Car mobile application.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-CONTACT INFORMATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Name: ${contactName}
+CUSTOMER INFORMATION
+${contactName}
 Email: ${contactEmail}
 Phone: ${contactPhone}
 
 APPOINTMENT DETAILS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Date & Time: ${formattedDateTime}
 Department: ${departmentName}
-Date: ${formattedDate}
-Time: ${formattedTime}
 Status: ${appointment.status}
 
-${vehicleInfo && vehicleInfo !== 'Not specified' ? `VEHICLE INFORMATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Vehicle: ${vehicleInfo}
+${vehicleInfo && vehicleInfo !== 'Not specified' ? `VEHICLE
+${vehicleInfo}
 
-` : ''}${appointment.notes ? `ADDITIONAL NOTES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+` : ''}${appointment.notes ? `NOTES
 ${appointment.notes}
 
-` : ''}REFERENCE INFORMATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 Reference ID: ${appointment.id}
 Submitted: ${new Date().toLocaleString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
+      month: 'short', 
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
     })}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-This is an automated notification from the Get a Nice Car mobile application.
-Please do not reply to this email. For inquiries, please contact the customer directly.
+Automated notification from Get a Nice Car mobile app
     `.trim();
 
     return { html, text };
