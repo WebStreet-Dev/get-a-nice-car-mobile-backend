@@ -367,9 +367,9 @@ Please do not reply to this email.
                 ${appointment.notes ? `
                 <!-- Notes Row -->
                 <tr>
-                  <td style="padding: 24px 30px; border-bottom: 1px solid #e8ecf0;">
-                    <div style="color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Notes</div>
-                    <div style="color: #4a5568; font-size: 15px; line-height: 1.6; white-space: pre-wrap; background-color: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 3px solid #667eea;">
+                  <td style="padding: 24px 30px; border-bottom: 1px solid #e8ecf0; text-align: left;">
+                    <div style="color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; text-align: left;">Notes</div>
+                    <div style="color: #4a5568; font-size: 15px; line-height: 1.6; white-space: pre-wrap; background-color: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 3px solid #667eea; text-align: left; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; display: block;">
                       ${this.escapeHtml(appointment.notes)}
                     </div>
                   </td>
