@@ -446,6 +446,13 @@ export class AppointmentService {
       const customerName = appointment.contactName || appointment.user.name || 'Customer';
       const departmentName = appointment.department.name;
 
+      logger.info('Preparing to send form submission email', {
+        appointmentId: appointment.id,
+        to: recipientEmail,
+        department: departmentName,
+        customerName,
+      });
+
       // Send email
       await emailService.sendEmail(
         recipientEmail,
@@ -458,13 +465,19 @@ export class AppointmentService {
         appointmentId: appointment.id,
         to: recipientEmail,
         department: departmentName,
+        customerName,
       });
     } catch (error: any) {
-      logger.error('Failed to send form submission email', {
+      logger.error('Failed to send form submission email - Full error details', {
         appointmentId: appointment.id,
+        to: recipientEmail,
         error: error.message,
+        code: error.code,
+        stack: error.stack,
+        department: appointment.department.name,
       });
       // Don't throw - email failure shouldn't prevent appointment creation
+      // But log it so we can debug
     }
   }
 

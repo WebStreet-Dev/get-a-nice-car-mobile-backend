@@ -27,31 +27,51 @@ class EmailService {
             user: config.smtp.user,
             pass: config.smtp.pass,
           },
+          tls: {
+            rejectUnauthorized: false, // GoDaddy requires this
+            ciphers: 'SSLv3',
+          },
           ...(requiresTLS && {
             requireTLS: true,
-            tls: {
-              ciphers: 'SSLv3',
-              rejectUnauthorized: false, // GoDaddy may require this
-            },
-          }),
-          ...(isSecure && {
-            tls: {
-              rejectUnauthorized: false, // GoDaddy may require this for SSL
-            },
           }),
         });
 
-        logger.info('Email service initialized', {
+        // Verify connection on initialization (async, don't block)
+        this.transporter.verify((error: any, success: any) => {
+          if (error) {
+            logger.error('Email service SMTP connection failed', {
+              error: error.message,
+              code: error.code,
+              command: error.command,
+              host: config.smtp.host,
+              port: config.smtp.port,
+              user: config.smtp.user,
+            });
+            this.transporter = null;
+          } else {
+            logger.info('Email service initialized and verified', {
+              host: config.smtp.host,
+              port: config.smtp.port,
+              from: config.smtp.from,
+              user: config.smtp.user,
+            });
+          }
+        });
+      } catch (error: any) {
+        logger.error('Failed to initialize email service', {
+          error: error.message,
+          stack: error.stack,
           host: config.smtp.host,
           port: config.smtp.port,
-          from: config.smtp.from,
         });
-      } catch (error) {
-        logger.error('Failed to initialize email service', { error });
         this.transporter = null;
       }
     } else {
-      logger.warn('Email service not configured - SMTP settings missing');
+      logger.warn('Email service not configured - SMTP settings missing', {
+        hasHost: !!config.smtp.host,
+        hasUser: !!config.smtp.user,
+        hasPass: !!config.smtp.pass,
+      });
     }
   }
 
@@ -69,18 +89,33 @@ class EmailService {
     text?: string
   ): Promise<void> {
     if (!this.transporter) {
-      logger.warn('Email service not available - SMTP not configured');
-      return;
+      const errorMsg = 'Email service not available - SMTP not configured';
+      logger.error(errorMsg, {
+        hasTransporter: false,
+        host: config.smtp.host,
+        port: config.smtp.port,
+        user: config.smtp.user,
+      });
+      throw new Error(errorMsg);
     }
 
     if (!to || !to.includes('@')) {
-      logger.warn('Invalid email address', { to });
-      return;
+      const errorMsg = `Invalid email address: ${to}`;
+      logger.error(errorMsg, { to });
+      throw new Error(errorMsg);
     }
 
     try {
-      const info = await this.transporter.sendMail({
+      logger.info('Attempting to send email', {
+        to,
+        subject,
         from: config.smtp.from,
+        host: config.smtp.host,
+        port: config.smtp.port,
+      });
+
+      const info = await this.transporter.sendMail({
+        from: `"Get a Nice Car" <${config.smtp.from}>`,
         to,
         subject,
         html,
@@ -91,12 +126,23 @@ class EmailService {
         to,
         subject,
         messageId: info.messageId,
+        response: info.response,
+        accepted: info.accepted,
+        rejected: info.rejected,
       });
     } catch (error: any) {
-      logger.error('Failed to send email', {
+      logger.error('Failed to send email - Full error details', {
         to,
         subject,
         error: error.message,
+        code: error.code,
+        command: error.command,
+        response: error.response,
+        responseCode: error.responseCode,
+        stack: error.stack,
+        host: config.smtp.host,
+        port: config.smtp.port,
+        user: config.smtp.user,
       });
       throw error;
     }
