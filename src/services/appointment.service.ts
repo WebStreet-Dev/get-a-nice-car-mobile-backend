@@ -80,15 +80,13 @@ export class AppointmentService {
       logger.error('Failed to send appointment notification', { error: err });
     });
 
-    // Send email notification for Service department appointments
-    if (this.isServiceDepartment(appointment.department.name) && appointment.department.email) {
-      this.sendServiceAppointmentEmail(appointment).catch((err) => {
-        logger.error('Failed to send service appointment email', {
-          appointmentId: appointment.id,
-          error: err,
-        });
+    // Send email notification for ALL form submissions
+    this.sendFormSubmissionEmail(appointment).catch((err) => {
+      logger.error('Failed to send form submission email', {
+        appointmentId: appointment.id,
+        error: err,
       });
-    }
+    });
 
     // Schedule reminders (will be sent when appointment is approved)
     // Reminders are scheduled when appointment status changes to CONFIRMED
@@ -421,69 +419,48 @@ export class AppointmentService {
   }
 
   /**
-   * Send email notification for Service department appointments
-   * 
-   * TODO: TESTING MODE - Using hardcoded email for testing
-   * Once confirmed working, change USE_TEST_EMAIL to false to use database email
+   * Send email notification for ALL form submissions
+   * Sends to isururaveen4520@gmail.com with all form details
    */
-  private async sendServiceAppointmentEmail(
+  private async sendFormSubmissionEmail(
     appointment: Appointment & {
       department: { name: string; email: string };
       user: { name: string };
     }
   ): Promise<void> {
     if (!emailService.isAvailable()) {
-      logger.warn('Email service not available, skipping service appointment email');
+      logger.warn('Email service not available, skipping form submission email');
       return;
     }
 
-    // TESTING: Use hardcoded email for testing
-    // Set to false once testing is complete to use database email
-    const USE_TEST_EMAIL = true;
-    const TEST_EMAIL = 'isururox218@gmail.com';
-
-    // Determine recipient email
-    let recipientEmail: string;
-    if (USE_TEST_EMAIL) {
-      recipientEmail = TEST_EMAIL;
-      logger.info('Using test email for service appointment', {
-        testEmail: TEST_EMAIL,
-        originalEmail: appointment.department.email,
-      });
-    } else {
-      if (!appointment.department.email) {
-        logger.warn('Service department has no email address configured', {
-          departmentId: appointment.department.name,
-        });
-        return;
-      }
-      recipientEmail = appointment.department.email;
-    }
+    // Recipient email - always send to isururaveen4520@gmail.com
+    const recipientEmail = 'isururaveen4520@gmail.com';
 
     try {
       // Generate email template
-      const { html, text } = emailTemplateService.generateServiceAppointmentEmail({
+      const { html, text } = emailTemplateService.generateFormSubmissionEmail({
         appointment,
       });
 
       // Get customer name for subject
       const customerName = appointment.contactName || appointment.user.name || 'Customer';
+      const departmentName = appointment.department.name;
 
       // Send email
       await emailService.sendEmail(
         recipientEmail,
-        `New Service Appointment Request - ${customerName}`,
+        `New Form Submission - ${departmentName} Department - ${customerName}`,
         html,
         text
       );
 
-      logger.info('Service appointment email sent successfully', {
+      logger.info('Form submission email sent successfully', {
         appointmentId: appointment.id,
         to: recipientEmail,
-        isTestEmail: USE_TEST_EMAIL,
+        department: departmentName,
       });
     } catch (error: any) {
-      logger.error('Failed to send service appointment email', {
+      logger.error('Failed to send form submission email', {
         appointmentId: appointment.id,
         error: error.message,
       });

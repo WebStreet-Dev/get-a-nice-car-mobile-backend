@@ -31,19 +31,19 @@ export const config = {
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
   },
   
-  // Email (Hostinger SMTP Configuration)
-  // Hostinger SMTP Settings:
-  // - Host: smtp.hostinger.com
+  // Email (GoDaddy SMTP Configuration)
+  // GoDaddy SMTP Settings:
+  // - Host: smtpout.secureserver.net
   // - Port 465: SSL/TLS (recommended)
   // - Port 587: TLS/STARTTLS (alternative)
-  // - Username: Full email address (e.g., you@yourdomain.com)
+  // - Username: Full email address (e.g., hello@getanicecar.com)
   // - Password: Your email account password
   smtp: {
-    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+    host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
     port: parseInt(process.env.SMTP_PORT || '465', 10), // 465 for SSL, 587 for TLS
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-    from: process.env.SMTP_FROM || 'noreply@getanicecar.com',
+    user: process.env.SMTP_USER || 'hello@getanicecar.com',
+    pass: process.env.SMTP_PASS || 'TempP@ss-3',
+    from: process.env.SMTP_FROM || 'hello@getanicecar.com',
   },
   
   // Admin

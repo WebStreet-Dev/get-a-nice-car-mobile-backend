@@ -13,7 +13,7 @@ class EmailService {
       config.smtp.pass
     ) {
       try {
-        // Hostinger SMTP configuration:
+        // GoDaddy SMTP configuration:
         // - Port 465: SSL/TLS (secure: true)
         // - Port 587: TLS/STARTTLS (secure: false, requiresTLS: true)
         const isSecure = config.smtp.port === 465;
@@ -31,6 +31,12 @@ class EmailService {
             requireTLS: true,
             tls: {
               ciphers: 'SSLv3',
+              rejectUnauthorized: false, // GoDaddy may require this
+            },
+          }),
+          ...(isSecure && {
+            tls: {
+              rejectUnauthorized: false, // GoDaddy may require this for SSL
             },
           }),
         });
