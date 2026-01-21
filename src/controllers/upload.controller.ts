@@ -5,6 +5,8 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthRequest } from '../types/index.js';
+import cloudinaryService from '../services/cloudinary.service.js';
+import { logger } from '../utils/logger.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -95,9 +97,41 @@ export class UploadController {
         return;
       }
 
-      // Generate URL for the uploaded file
-      const baseUrl = req.protocol + '://' + req.get('host');
-      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      let fileUrl: string;
+      let shouldDeleteLocalFile = false;
+
+      // Try to upload to Cloudinary first (if configured)
+      if (cloudinaryService.isConfigured()) {
+        logger.info('Attempting to upload to Cloudinary...');
+        const cloudinaryUrl = await cloudinaryService.uploadImage(filePath, req.file.originalname);
+        
+        if (cloudinaryUrl) {
+          // Successfully uploaded to Cloudinary
+          fileUrl = cloudinaryUrl;
+          shouldDeleteLocalFile = true; // Clean up local file after cloud upload
+          logger.info('Image uploaded to Cloudinary successfully', { url: cloudinaryUrl });
+        } else {
+          // Cloudinary upload failed, fall back to local storage
+          logger.warn('Cloudinary upload failed, falling back to local storage');
+          const baseUrl = req.protocol + '://' + req.get('host');
+          fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+        }
+      } else {
+        // Cloudinary not configured, use local storage
+        const baseUrl = req.protocol + '://' + req.get('host');
+        fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      }
+
+      // Clean up local file if uploaded to Cloudinary
+      if (shouldDeleteLocalFile) {
+        try {
+          fs.unlinkSync(filePath);
+          logger.info('Local file deleted after Cloudinary upload', { filename: req.file.filename });
+        } catch (deleteError) {
+          logger.warn('Failed to delete local file after Cloudinary upload', deleteError);
+          // Don't fail the request if cleanup fails
+        }
+      }
 
       sendSuccess(res, {
         url: fileUrl,
@@ -105,9 +139,10 @@ export class UploadController {
         originalName: req.file.originalname,
         size: req.file.size,
         mimetype: req.file.mimetype,
+        storage: cloudinaryService.isConfigured() && shouldDeleteLocalFile ? 'cloudinary' : 'local',
       }, 'Image uploaded successfully');
     } catch (error) {
-      console.error('Upload error:', error);
+      logger.error('Upload error:', error);
       next(error);
     }
   }

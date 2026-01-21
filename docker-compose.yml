@@ -54,6 +54,8 @@ services:
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
+    volumes:
+      - uploads_data:/app/uploads  # Persist uploaded files across restarts
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,6 +82,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:  # Persistent storage for uploaded images
 
 networks:
   nicecar_network:

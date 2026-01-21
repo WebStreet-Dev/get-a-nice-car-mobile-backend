@@ -51,6 +51,16 @@ export const config = {
     email: process.env.ADMIN_EMAIL || 'admin@getanicecar.com',
     password: process.env.ADMIN_PASSWORD || 'admin123456',
   },
+  
+  // Cloudinary (for production image storage)
+  // Set these in production to enable cloud storage
+  // Images will fall back to local storage if not configured
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+    folder: process.env.CLOUDINARY_FOLDER || 'nicecar',
+  },
 };
 
 export default config;
