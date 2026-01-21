@@ -13,7 +13,8 @@ import type {
   Role,
 } from '../types';
 
-const API_URL = '/api/v1';
+// Use environment variable for API URL, fallback to relative path for same-domain deployment
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 const api = axios.create({
   baseURL: API_URL,
