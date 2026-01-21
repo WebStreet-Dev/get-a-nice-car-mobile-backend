@@ -6,6 +6,7 @@ import {
   LoginInput,
   RefreshTokenInput,
   ChangePasswordInput,
+  ForceChangePasswordInput,
 } from '../validators/auth.validator.js';
 import { AuthRequest } from '../types/index.js';
 
@@ -109,6 +110,27 @@ export class AuthController {
       const userId = req.user!.id;
 
       await authService.changePassword(userId, currentPassword, newPassword);
+
+      sendSuccess(res, null, 'Password changed successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Force change password (for first login when mustChangePassword is true)
+   * PUT /api/v1/auth/force-change-password
+   */
+  async forceChangePassword(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { newPassword } = req.body as ForceChangePasswordInput;
+      const userId = req.user!.id;
+
+      await authService.forceChangePassword(userId, newPassword);
 
       sendSuccess(res, null, 'Password changed successfully');
     } catch (error) {

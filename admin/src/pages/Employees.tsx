@@ -6,6 +6,8 @@ import dayjs from 'dayjs';
 import { adminApi } from '../services/api';
 import type { User, Role } from '../types';
 
+const { Option } = Select;
+
 const { Title } = Typography;
 
 export default function EmployeesPage() {
@@ -132,8 +134,12 @@ export default function EmployeesPage() {
             icon={<EditOutlined />}
             onClick={() => {
               setEditingEmployee(record);
+              const nameParts = record.name.split(' ');
+              const firstName = nameParts[0] || '';
+              const lastName = nameParts.slice(1).join(' ') || '';
               editForm.setFieldsValue({
-                name: record.name,
+                firstName,
+                lastName,
                 email: record.email,
                 phone: record.phone,
               });
@@ -168,8 +174,11 @@ export default function EmployeesPage() {
   ];
 
   const handleCreate = async (values: any) => {
+    // Combine firstName and lastName into name
+    const fullName = `${values.firstName} ${values.lastName}`.trim();
+    
     createMutation.mutate({
-      name: values.name,
+      name: fullName,
       email: values.email,
       phone: values.phone,
       password: values.password,
@@ -232,11 +241,29 @@ export default function EmployeesPage() {
           onFinish={handleCreate}
         >
           <Form.Item
-            name="name"
-            label="Name"
-            rules={[{ required: true, message: 'Please enter name' }]}
+            name="firstName"
+            label="First Name"
+            rules={[{ required: true, message: 'Please enter first name' }]}
           >
-            <Input />
+            <Input placeholder="Enter first name" />
+          </Form.Item>
+          <Form.Item
+            name="lastName"
+            label="Last Name"
+            rules={[{ required: true, message: 'Please enter last name' }]}
+          >
+            <Input placeholder="Enter last name" />
+          </Form.Item>
+          <Form.Item
+            name="gender"
+            label="Gender"
+            rules={[{ required: true, message: 'Please select gender' }]}
+          >
+            <Select placeholder="Select gender">
+              <Option value="Male">Male</Option>
+              <Option value="Female">Female</Option>
+              <Option value="Other">Other</Option>
+            </Select>
           </Form.Item>
           <Form.Item
             name="email"
@@ -246,21 +273,42 @@ export default function EmployeesPage() {
               { type: 'email', message: 'Please enter valid email' },
             ]}
           >
-            <Input />
+            <Input placeholder="Enter email" />
           </Form.Item>
           <Form.Item
             name="phone"
             label="Phone"
             rules={[{ required: true, message: 'Please enter phone' }]}
           >
-            <Input />
+            <Input placeholder="Enter phone number" />
           </Form.Item>
           <Form.Item
             name="password"
             label="Password"
-            rules={[{ required: true, message: 'Please enter password' }, { min: 6, message: 'Password must be at least 6 characters' }]}
+            rules={[
+              { required: true, message: 'Please enter password' },
+              { min: 6, message: 'Password must be at least 6 characters' },
+            ]}
           >
-            <Input.Password />
+            <Input.Password placeholder="Enter password" />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            label="Confirm Password"
+            dependencies={['password']}
+            rules={[
+              { required: true, message: 'Please confirm password' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('password') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Passwords do not match'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="Confirm password" />
           </Form.Item>
           <Form.Item
             name="role"
@@ -269,8 +317,8 @@ export default function EmployeesPage() {
             initialValue="ADMIN"
           >
             <Select>
-              <Select.Option value="ADMIN">Admin</Select.Option>
-              <Select.Option value="SUPER_ADMIN">Super Admin</Select.Option>
+              <Option value="ADMIN">Admin</Option>
+              <Option value="SUPER_ADMIN">Super Admin</Option>
             </Select>
           </Form.Item>
           <Form.Item
@@ -285,9 +333,9 @@ export default function EmployeesPage() {
               optionFilterProp="children"
             >
               {roles?.filter(role => !role.isSystemRole).map((role) => (
-                <Select.Option key={role.id} value={role.id}>
+                <Option key={role.id} value={role.id}>
                   {role.name} {role.description && `- ${role.description}`}
-                </Select.Option>
+                </Option>
               ))}
             </Select>
           </Form.Item>
@@ -312,10 +360,15 @@ export default function EmployeesPage() {
           layout="vertical"
           onFinish={(values) => {
             if (editingEmployee) {
+              // Split name into first and last, or use provided values
+              const firstName = values.firstName || editingEmployee.name.split(' ')[0];
+              const lastName = values.lastName || editingEmployee.name.split(' ').slice(1).join(' ') || '';
+              const fullName = `${firstName} ${lastName}`.trim();
+              
               updateMutation.mutate({
                 id: editingEmployee.id,
                 data: {
-                  name: values.name,
+                  name: fullName,
                   email: values.email,
                   phone: values.phone,
                 },
@@ -324,11 +377,20 @@ export default function EmployeesPage() {
           }}
         >
           <Form.Item
-            name="name"
-            label="Name"
-            rules={[{ required: true, message: 'Please enter name' }]}
+            name="firstName"
+            label="First Name"
+            rules={[{ required: true, message: 'Please enter first name' }]}
+            initialValue={editingEmployee?.name.split(' ')[0]}
           >
-            <Input />
+            <Input placeholder="Enter first name" />
+          </Form.Item>
+          <Form.Item
+            name="lastName"
+            label="Last Name"
+            rules={[{ required: true, message: 'Please enter last name' }]}
+            initialValue={editingEmployee?.name.split(' ').slice(1).join(' ') || ''}
+          >
+            <Input placeholder="Enter last name" />
           </Form.Item>
           <Form.Item
             name="email"
@@ -338,14 +400,14 @@ export default function EmployeesPage() {
               { type: 'email', message: 'Please enter valid email' },
             ]}
           >
-            <Input />
+            <Input placeholder="Enter email" />
           </Form.Item>
           <Form.Item
             name="phone"
             label="Phone"
             rules={[{ required: true, message: 'Please enter phone' }]}
           >
-            <Input />
+            <Input placeholder="Enter phone number" />
           </Form.Item>
         </Form>
       </Modal>

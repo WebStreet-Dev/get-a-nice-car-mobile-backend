@@ -7,6 +7,7 @@ import {
   loginSchema,
   refreshTokenSchema,
   changePasswordSchema,
+  forceChangePasswordSchema,
 } from '../validators/auth.validator.js';
 
 const router = Router();
@@ -65,6 +66,18 @@ router.put(
   authenticate,
   validate(changePasswordSchema),
   authController.changePassword.bind(authController)
+);
+
+/**
+ * @route   PUT /api/v1/auth/force-change-password
+ * @desc    Force change password (for first login when mustChangePassword is true)
+ * @access  Private
+ */
+router.put(
+  '/force-change-password',
+  authenticate,
+  validate(forceChangePasswordSchema),
+  authController.forceChangePassword.bind(authController)
 );
 
 /**

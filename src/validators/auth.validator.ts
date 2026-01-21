@@ -62,12 +62,20 @@ export const changePasswordSchema = z.object({
     .max(100, 'New password must be less than 100 characters'),
 });
 
+export const forceChangePasswordSchema = z.object({
+  newPassword: z
+    .string()
+    .min(6, 'New password must be at least 6 characters')
+    .max(100, 'New password must be less than 100 characters'),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type ForceChangePasswordInput = z.infer<typeof forceChangePasswordSchema>;
 
 
 

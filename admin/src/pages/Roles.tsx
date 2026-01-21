@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Button, Space, Typography, message, Modal, Input, Tag } from 'antd';
+import { Table, Button, Space, Typography, message, Modal, Input, Tag, Checkbox, Divider } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { adminApi } from '../services/api';
 import type { Role } from '../types';
+
+interface Permission {
+  key: string;
+  label: string;
+  group: string;
+}
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -17,6 +23,11 @@ export default function RolesPage() {
   const { data: roles, isLoading } = useQuery<Role[]>({
     queryKey: ['roles'],
     queryFn: () => adminApi.getRoles(),
+  });
+
+  const { data: permissions } = useQuery<Permission[]>({
+    queryKey: ['permissions'],
+    queryFn: () => adminApi.getPermissions(),
   });
 
   const createMutation = useMutation({
@@ -157,6 +168,7 @@ export default function RolesPage() {
         onCancel={() => setCreateModalVisible(false)}
         onSuccess={(data) => createMutation.mutate(data)}
         loading={createMutation.isPending}
+        permissions={permissions || []}
       />
 
       {/* Edit Role Modal */}
@@ -179,6 +191,7 @@ export default function RolesPage() {
             });
           }}
           loading={updateMutation.isPending}
+          permissions={permissions || []}
         />
       )}
     </div>
@@ -190,37 +203,52 @@ function CreateRoleModal({
   onCancel,
   onSuccess,
   loading,
+  permissions,
 }: {
   visible: boolean;
   onCancel: () => void;
   onSuccess: (data: { name: string; description?: string; permissions: string[] }) => void;
   loading: boolean;
+  permissions: Permission[];
 }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    permissions: '',
   });
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!visible) {
+      setFormData({ name: '', description: '' });
+      setSelectedPermissions([]);
+    }
+  }, [visible]);
 
   const handleSubmit = () => {
-    if (!formData.name || !formData.permissions) {
-      message.warning('Name and permissions are required');
+    if (!formData.name) {
+      message.warning('Name is required');
       return;
     }
-
-    const permissions = formData.permissions
-      .split(',')
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0);
+    if (selectedPermissions.length === 0) {
+      message.warning('At least one permission is required');
+      return;
+    }
 
     onSuccess({
       name: formData.name,
       description: formData.description || undefined,
-      permissions,
+      permissions: selectedPermissions,
     });
-
-    setFormData({ name: '', description: '', permissions: '' });
   };
+
+  // Group permissions by category
+  const groupedPermissions = permissions.reduce((acc, perm) => {
+    if (!acc[perm.group]) {
+      acc[perm.group] = [];
+    }
+    acc[perm.group].push(perm);
+    return acc;
+  }, {} as Record<string, Permission[]>);
 
   return (
     <Modal
@@ -230,6 +258,7 @@ function CreateRoleModal({
       onCancel={onCancel}
       okText="Create"
       okButtonProps={{ loading }}
+      width={600}
     >
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
         <div>
@@ -252,14 +281,30 @@ function CreateRoleModal({
           />
         </div>
         <div>
-          <Text strong>Permissions * (comma-separated)</Text>
-          <TextArea
-            rows={3}
-            value={formData.permissions}
-            onChange={(e) => setFormData({ ...formData, permissions: e.target.value })}
-            placeholder="e.g., view_users, edit_appointments, manage_departments"
-            style={{ marginTop: 8 }}
-          />
+          <Text strong>Permissions *</Text>
+          <div style={{ marginTop: 8, maxHeight: 300, overflowY: 'auto', border: '1px solid #d9d9d9', borderRadius: 4, padding: 12 }}>
+            {Object.entries(groupedPermissions).map(([group, perms]) => (
+              <div key={group} style={{ marginBottom: 16 }}>
+                <Text strong style={{ fontSize: 12, color: '#666' }}>{group}</Text>
+                <Checkbox.Group
+                  value={selectedPermissions}
+                  onChange={(values) => setSelectedPermissions(values as string[])}
+                  style={{ width: '100%', marginTop: 8 }}
+                >
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    {perms.map((perm) => (
+                      <Checkbox key={perm.key} value={perm.key}>
+                        {perm.label}
+                      </Checkbox>
+                    ))}
+                  </Space>
+                </Checkbox.Group>
+                {group !== Object.keys(groupedPermissions)[Object.keys(groupedPermissions).length - 1] && (
+                  <Divider style={{ margin: '12px 0' }} />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </Space>
     </Modal>
@@ -272,36 +317,56 @@ function EditRoleModal({
   onCancel,
   onSuccess,
   loading,
+  permissions,
 }: {
   visible: boolean;
   role: Role;
   onCancel: () => void;
   onSuccess: (data: { name: string; description?: string; permissions: string[] }) => void;
   loading: boolean;
+  permissions: Permission[];
 }) {
   const [formData, setFormData] = useState({
     name: role.name,
     description: role.description || '',
-    permissions: role.permissions.join(', '),
   });
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role.permissions);
+
+  useEffect(() => {
+    if (visible) {
+      setFormData({
+        name: role.name,
+        description: role.description || '',
+      });
+      setSelectedPermissions(role.permissions);
+    }
+  }, [visible, role]);
 
   const handleSubmit = () => {
-    if (!formData.name || !formData.permissions) {
-      message.warning('Name and permissions are required');
+    if (!formData.name) {
+      message.warning('Name is required');
       return;
     }
-
-    const permissions = formData.permissions
-      .split(',')
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0);
+    if (selectedPermissions.length === 0) {
+      message.warning('At least one permission is required');
+      return;
+    }
 
     onSuccess({
       name: formData.name,
       description: formData.description || undefined,
-      permissions,
+      permissions: selectedPermissions,
     });
   };
+
+  // Group permissions by category
+  const groupedPermissions = permissions.reduce((acc, perm) => {
+    if (!acc[perm.group]) {
+      acc[perm.group] = [];
+    }
+    acc[perm.group].push(perm);
+    return acc;
+  }, {} as Record<string, Permission[]>);
 
   return (
     <Modal
@@ -311,6 +376,7 @@ function EditRoleModal({
       onCancel={onCancel}
       okText="Save"
       okButtonProps={{ loading }}
+      width={600}
     >
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
         <div>
@@ -331,13 +397,30 @@ function EditRoleModal({
           />
         </div>
         <div>
-          <Text strong>Permissions * (comma-separated)</Text>
-          <TextArea
-            rows={3}
-            value={formData.permissions}
-            onChange={(e) => setFormData({ ...formData, permissions: e.target.value })}
-            style={{ marginTop: 8 }}
-          />
+          <Text strong>Permissions *</Text>
+          <div style={{ marginTop: 8, maxHeight: 300, overflowY: 'auto', border: '1px solid #d9d9d9', borderRadius: 4, padding: 12 }}>
+            {Object.entries(groupedPermissions).map(([group, perms]) => (
+              <div key={group} style={{ marginBottom: 16 }}>
+                <Text strong style={{ fontSize: 12, color: '#666' }}>{group}</Text>
+                <Checkbox.Group
+                  value={selectedPermissions}
+                  onChange={(values) => setSelectedPermissions(values as string[])}
+                  style={{ width: '100%', marginTop: 8 }}
+                >
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    {perms.map((perm) => (
+                      <Checkbox key={perm.key} value={perm.key}>
+                        {perm.label}
+                      </Checkbox>
+                    ))}
+                  </Space>
+                </Checkbox.Group>
+                {group !== Object.keys(groupedPermissions)[Object.keys(groupedPermissions).length - 1] && (
+                  <Divider style={{ margin: '12px 0' }} />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </Space>
     </Modal>

@@ -272,6 +272,12 @@ export const adminApi = {
   deleteRole: async (id: string): Promise<void> => {
     await api.delete(`/admin/roles/${id}`);
   },
+
+  // Permissions
+  getPermissions: async (): Promise<Array<{ key: string; label: string; group: string }>> => {
+    const response = await api.get<ApiResponse<Array<{ key: string; label: string; group: string }>>>('/admin/permissions');
+    return response.data.data!;
+  },
 };
 
 export default api;

@@ -334,6 +334,46 @@ export class AuthService {
   }
 
   /**
+   * Force change password (for first login when mustChangePassword is true)
+   * This doesn't require current password and clears the mustChangePassword flag
+   */
+  async forceChangePassword(
+    userId: string,
+    newPassword: string
+  ): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User');
+    }
+
+    if (!user.mustChangePassword) {
+      throw new AppError('Password change is not required', 400);
+    }
+
+    // Hash new password
+    const passwordHash = await this.hashPassword(newPassword);
+
+    // Update password and clear mustChangePassword flag
+    await prisma.user.update({
+      where: { id: userId },
+      data: { 
+        passwordHash,
+        mustChangePassword: false,
+      },
+    });
+
+    // Invalidate all refresh tokens for this user
+    await prisma.refreshToken.deleteMany({
+      where: { userId },
+    });
+
+    logger.info('Password force changed', { userId });
+  }
+
+  /**
    * Approve user account
    */
   async approveUser(userId: string, approvedBy: string): Promise<Omit<User, 'passwordHash'>> {
@@ -442,6 +482,7 @@ export class AuthService {
     const passwordHash = await this.hashPassword(data.password);
 
     // Create user with APPROVED status (internal users don't need approval)
+    // Set mustChangePassword to true so employee must change password on first login
     const user = await prisma.user.create({
       data: {
         name: data.name,
@@ -454,6 +495,7 @@ export class AuthService {
         approvedAt: new Date(),
         approvedBy: createdBy,
         customRoleId: data.customRoleId,
+        mustChangePassword: true, // Force password change on first login
       },
     });
 

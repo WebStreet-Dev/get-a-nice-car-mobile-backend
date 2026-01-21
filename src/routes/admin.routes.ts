@@ -394,6 +394,13 @@ router.post('/employees/:id/assign-role', roleController.assignToUser.bind(roleC
  */
 router.delete('/employees/:id/role', roleController.removeFromUser.bind(roleController));
 
+/**
+ * @route   GET /api/v1/admin/permissions
+ * @desc    Get available permissions
+ * @access  Admin
+ */
+router.get('/permissions', adminController.getPermissions.bind(adminController));
+
 // ==================== SALES PERSONS ====================
 
 /**

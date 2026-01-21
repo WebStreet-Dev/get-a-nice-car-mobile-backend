@@ -12,6 +12,7 @@ import authService from '../services/auth.service.js';
 import { sendSuccess, sendCreated, sendPaginated, sendNoContent } from '../utils/response.js';
 import { AuthRequest } from '../types/index.js';
 import { ForbiddenError, AppError } from '../middleware/errorHandler.js';
+import { AVAILABLE_PERMISSIONS } from '../constants/permissions.js';
 
 export class AdminController {
   // ==================== DASHBOARD ====================
@@ -741,6 +742,22 @@ export class AdminController {
     try {
       await adminNotificationService.markAllAsRead();
       sendSuccess(res, null, 'All notifications marked as read');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get available permissions
+   * GET /api/v1/admin/permissions
+   */
+  async getPermissions(
+    _req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      sendSuccess(res, AVAILABLE_PERMISSIONS);
     } catch (error) {
       next(error);
     }

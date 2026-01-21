@@ -90,6 +90,7 @@ model User {
   approvedAt   DateTime?    @map("approved_at")
   approvedBy   String?      @map("approved_by")
   customRoleId String?       @map("custom_role_id")
+  mustChangePassword Boolean @default(false) @map("must_change_password")
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
