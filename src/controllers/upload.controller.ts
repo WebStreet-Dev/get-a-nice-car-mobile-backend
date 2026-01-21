@@ -128,7 +128,7 @@ export class UploadController {
           fs.unlinkSync(filePath);
           logger.info('Local file deleted after Cloudinary upload', { filename: req.file.filename });
         } catch (deleteError) {
-          logger.warn('Failed to delete local file after Cloudinary upload', deleteError);
+          logger.warn('Failed to delete local file after Cloudinary upload', deleteError as object);
           // Don't fail the request if cleanup fails
         }
       }
@@ -142,7 +142,7 @@ export class UploadController {
         storage: cloudinaryService.isConfigured() && shouldDeleteLocalFile ? 'cloudinary' : 'local',
       }, 'Image uploaded successfully');
     } catch (error) {
-      logger.error('Upload error:', error);
+      logger.error('Upload error:', error as object);
       next(error);
     }
   }

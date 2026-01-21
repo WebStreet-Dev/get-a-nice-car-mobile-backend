@@ -52,7 +52,7 @@ export class CloudinaryService {
 
       return result.secure_url;
     } catch (error) {
-      logger.error('Cloudinary upload error:', error);
+      logger.error('Cloudinary upload error:', error as object);
       return null;
     }
   }
@@ -120,7 +120,7 @@ export class CloudinaryService {
       // Extract public ID from URL
       const publicId = this.extractPublicId(imageUrl);
       if (!publicId) {
-        logger.warn('Could not extract public ID from URL:', imageUrl);
+        logger.warn('Could not extract public ID from URL:', { url: imageUrl });
         return false;
       }
 
@@ -134,7 +134,7 @@ export class CloudinaryService {
         return false;
       }
     } catch (error) {
-      logger.error('Cloudinary delete error:', error);
+      logger.error('Cloudinary delete error:', error as object);
       return false;
     }
   }
@@ -165,7 +165,7 @@ export class CloudinaryService {
       
       return publicId;
     } catch (error) {
-      logger.error('Error extracting public ID:', error);
+      logger.error('Error extracting public ID:', error as object);
       return null;
     }
   }
@@ -174,7 +174,7 @@ export class CloudinaryService {
    * Check if Cloudinary is configured
    */
   isConfigured(): boolean {
-    return isCloudinaryConfigured;
+    return Boolean(isCloudinaryConfigured);
   }
 }
 
