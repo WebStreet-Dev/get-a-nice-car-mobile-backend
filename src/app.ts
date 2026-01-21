@@ -46,10 +46,11 @@ app.use(cors({
 }));
 
 // Rate limiting
+// Increased limits to support multiple concurrent testers (12+ users)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: { success: false, error: 'Too many requests, please try again later.' },
+  max: 1000, // Limit each IP to 1000 requests per windowMs (increased for testing)
+  message: { success: false, error: 'Api429 - Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -59,8 +60,8 @@ app.use(limiter);
 // More lenient in development, stricter in production
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: config.nodeEnv === 'development' ? 100 : 10, // Allow more attempts in development
-  message: { success: false, error: 'Too many authentication attempts, please try again later.' },
+  max: config.nodeEnv === 'development' ? 100 : 50, // Allow 50 auth attempts in production (increased for testing)
+  message: { success: false, error: 'Api429 - Too many authentication attempts, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
