@@ -122,10 +122,14 @@ export class NotificationService {
     });
 
     // Send push notification if user has FCM token
+    // Include type in FCM data payload so client can detect appointment status changes
     await this.sendPushNotification(data.userId, {
       title: data.title,
       body: data.message,
-      data: data.data,
+      data: {
+        ...data.data,
+        type: data.type, // Include notification type in FCM data
+      },
     });
 
     logger.info('Notification created', { notificationId: notification.id, userId: data.userId });

@@ -420,7 +420,7 @@ export class AppointmentService {
 
   /**
    * Send email notification for ALL form submissions
-   * Sends to isururaveen4520@gmail.com with all form details
+   * Sends to email configured in FORM_SUBMISSION_EMAIL env variable
    */
   private async sendFormSubmissionEmail(
     appointment: Appointment & {
@@ -433,8 +433,8 @@ export class AppointmentService {
       return;
     }
 
-    // Recipient email - always send to isururaveen4520@gmail.com
-    const recipientEmail = 'isururaveen4520@gmail.com';
+    // Recipient email - configurable via FORM_SUBMISSION_EMAIL env variable
+    const recipientEmail = process.env.FORM_SUBMISSION_EMAIL || 'NCmechanicshop@gmail.com';
 
     try {
       // Generate email template
