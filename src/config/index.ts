@@ -42,7 +42,9 @@ export const config = {
     host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
     port: parseInt(process.env.SMTP_PORT || '465', 10), // 465 for SSL, 587 for TLS
     user: process.env.SMTP_USER || 'hello@getanicecar.com',
-    pass: process.env.SMTP_PASS || 'TempP@ss-3',
+    // IMPORTANT: In production, SMTP_PASS must be set via environment variable
+    // The default is only for local development
+    pass: process.env.SMTP_PASS || (process.env.NODE_ENV === 'production' ? '' : 'TempP@ss-3'),
     from: process.env.SMTP_FROM || 'hello@getanicecar.com',
   },
   

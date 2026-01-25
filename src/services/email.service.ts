@@ -6,12 +6,39 @@ class EmailService {
   private transporter: Transporter | null = null;
 
   constructor() {
+    // Check if we're using default values in production (which would be wrong)
+    const isProduction = config.nodeEnv === 'production';
+    const usingDefaultPassword = !process.env.SMTP_PASS && config.smtp.pass === 'TempP@ss-3';
+    
+    if (isProduction && usingDefaultPassword) {
+      logger.error('CRITICAL: SMTP_PASS environment variable not set in production!', {
+        nodeEnv: config.nodeEnv,
+        hasEnvVar: !!process.env.SMTP_PASS,
+        usingDefault: true,
+        action: 'Set SMTP_PASS environment variable in your production environment',
+      });
+    }
+    
     // Initialize transporter if SMTP is properly configured
     if (
       config.smtp.host &&
       config.smtp.user &&
       config.smtp.pass
     ) {
+      // Log SMTP configuration status (without exposing password)
+      logger.info('Initializing email service with SMTP configuration', {
+        host: config.smtp.host,
+        port: config.smtp.port,
+        user: config.smtp.user,
+        from: config.smtp.from,
+        hasPassword: !!config.smtp.pass,
+        passwordLength: config.smtp.pass ? config.smtp.pass.length : 0,
+        passwordFromEnv: !!process.env.SMTP_PASS,
+        envPasswordLength: process.env.SMTP_PASS ? process.env.SMTP_PASS.length : 0,
+        nodeEnv: config.nodeEnv,
+        usingDefaultPassword: usingDefaultPassword,
+      });
+      
       try {
         // GoDaddy SMTP configuration:
         // - Port 465: SSL/TLS (secure: true)
@@ -46,7 +73,25 @@ class EmailService {
               host: config.smtp.host,
               port: config.smtp.port,
               user: config.smtp.user,
+              // Don't log password, but check if it's set
+              hasPassword: !!config.smtp.pass,
+              passwordLength: config.smtp.pass ? config.smtp.pass.length : 0,
             });
+            
+            // Provide helpful error message based on error code
+            if (error.code === 'EAUTH') {
+              logger.error('SMTP Authentication Failed - Possible causes:', {
+                issue: 'Invalid credentials',
+                suggestions: [
+                  '1. Check if SMTP_PASS environment variable is set correctly',
+                  '2. Verify the password for hello@getanicecar.com in GoDaddy',
+                  '3. Check if GoDaddy requires an app-specific password',
+                  '4. Ensure the email account is not locked or suspended',
+                  '5. Try resetting the email password in GoDaddy',
+                ],
+              });
+            }
+            
             this.transporter = null;
           } else {
             logger.info('Email service initialized and verified', {
@@ -71,6 +116,13 @@ class EmailService {
         hasHost: !!config.smtp.host,
         hasUser: !!config.smtp.user,
         hasPass: !!config.smtp.pass,
+        host: config.smtp.host || 'not set',
+        user: config.smtp.user || 'not set',
+        // Check environment variables directly
+        envSMTP_HOST: !!process.env.SMTP_HOST,
+        envSMTP_USER: !!process.env.SMTP_USER,
+        envSMTP_PASS: !!process.env.SMTP_PASS,
+        envSMTP_PORT: process.env.SMTP_PORT || 'not set',
       });
     }
   }
