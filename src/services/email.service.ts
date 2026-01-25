@@ -56,11 +56,15 @@ class EmailService {
           },
           tls: {
             rejectUnauthorized: false, // GoDaddy requires this
-            ciphers: 'SSLv3',
+            // Remove ciphers restriction - let Node.js negotiate
+            // ciphers: 'SSLv3', // This might be causing issues
           },
           ...(requiresTLS && {
             requireTLS: true,
           }),
+          // Add connection timeout
+          connectionTimeout: 10000, // 10 seconds
+          greetingTimeout: 10000,
         });
 
         // Verify connection on initialization (async, don't block)
@@ -83,12 +87,16 @@ class EmailService {
               logger.error('SMTP Authentication Failed - Possible causes:', {
                 issue: 'Invalid credentials',
                 suggestions: [
-                  '1. Check if SMTP_PASS environment variable is set correctly',
+                  '1. Check if SMTP_PASS environment variable is set correctly (may need quotes if password has special chars)',
                   '2. Verify the password for hello@getanicecar.com in GoDaddy',
-                  '3. Check if GoDaddy requires an app-specific password',
+                  '3. Check if GoDaddy requires an app-specific password (if 2FA is enabled)',
                   '4. Ensure the email account is not locked or suspended',
                   '5. Try resetting the email password in GoDaddy',
+                  '6. Try using port 587 instead of 465 (set SMTP_PORT=587)',
+                  '7. Check if password contains special characters that need escaping (@, #, $, etc.)',
                 ],
+                currentPort: config.smtp.port,
+                alternativePort: config.smtp.port === 465 ? 587 : 465,
               });
             }
             
