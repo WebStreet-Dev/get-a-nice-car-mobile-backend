@@ -38,6 +38,10 @@ import uploadRoutes from './routes/upload.routes.js';
 
 const app = express();
 
+// Trust proxy - required when behind nginx/reverse proxy
+// This allows express-rate-limit to correctly identify client IPs
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 

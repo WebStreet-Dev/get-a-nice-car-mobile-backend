@@ -87,17 +87,24 @@ class EmailService {
               logger.error('SMTP Authentication Failed - Possible causes:', {
                 issue: 'Invalid credentials',
                 suggestions: [
-                  '1. Check if SMTP_PASS environment variable is set correctly (may need quotes if password has special chars)',
-                  '2. Verify the password for hello@getanicecar.com in GoDaddy',
-                  '3. Check if GoDaddy requires an app-specific password (if 2FA is enabled)',
-                  '4. Ensure the email account is not locked or suspended',
-                  '5. Try resetting the email password in GoDaddy',
-                  '6. Try using port 587 instead of 465 (set SMTP_PORT=587)',
-                  '7. Check if password contains special characters that need escaping (@, #, $, etc.)',
+                  '1. Verify the password for hello@getanicecar.com in GoDaddy (may have changed)',
+                  '2. Check if GoDaddy requires an app-specific password (if 2FA is enabled)',
+                  '3. Ensure the email account is not locked or suspended',
+                  '4. Try using port 587 instead of 465 (set SMTP_PORT=587 and restart)',
+                  '5. Check GoDaddy email account security settings',
+                  '6. Password may need to be reset in GoDaddy if account was locked',
                 ],
                 currentPort: config.smtp.port,
                 alternativePort: config.smtp.port === 465 ? 587 : 465,
+                note: 'If port 465 fails, try setting SMTP_PORT=587 in environment variables',
               });
+              
+              // If using port 465 and authentication fails, suggest trying 587
+              if (config.smtp.port === 465) {
+                logger.warn('Port 465 authentication failed. Consider trying port 587 (TLS/STARTTLS) instead.', {
+                  action: 'Set SMTP_PORT=587 in environment variables and restart the server',
+                });
+              }
             }
             
             this.transporter = null;
