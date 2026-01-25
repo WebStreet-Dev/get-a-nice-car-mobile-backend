@@ -71,13 +71,22 @@ export class AppointmentService {
     logger.info('Appointment created', { appointmentId: appointment.id, userId });
 
     // Send notification to admins
+    logger.info('Sending admin notification for new appointment', {
+      appointmentId: appointment.id,
+      userName: appointment.user.name,
+      departmentName: appointment.department.name,
+    });
+    
     adminNotificationService.notifyAppointmentCreated({
       appointmentId: appointment.id,
       userName: appointment.user.name,
       departmentName: appointment.department.name,
       dateTime: appointmentDate,
     }).catch((err) => {
-      logger.error('Failed to send appointment notification', { error: err });
+      logger.error('Failed to send appointment notification', { 
+        appointmentId: appointment.id,
+        error: err 
+      });
     });
 
     // Send email notification for ALL form submissions

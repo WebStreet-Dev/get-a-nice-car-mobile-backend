@@ -46,18 +46,50 @@ export class UserService {
    * Update FCM token for push notifications
    */
   async updateFcmToken(userId: string, fcmToken: string): Promise<void> {
+    // Validate token is not empty
+    if (!fcmToken || fcmToken.trim().length === 0) {
+      throw new AppError('FCM token cannot be empty', 400);
+    }
+
+    // Get user info before update to check role
+    const userBefore = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, role: true, fcmToken: true },
+    });
+
+    if (!userBefore) {
+      throw new NotFoundError('User');
+    }
+
     const user = await prisma.user.update({
       where: { id: userId },
       data: { fcmToken },
       select: { email: true, role: true },
     });
 
+    const isAdmin = user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN;
+    const hadToken = !!userBefore.fcmToken;
+    const tokenChanged = userBefore.fcmToken !== fcmToken;
+
     logger.info('FCM token updated', { 
       userId, 
       email: user.email, 
       role: user.role,
-      tokenPrefix: fcmToken.substring(0, 20) + '...' 
+      isAdmin,
+      hadToken,
+      tokenChanged,
+      tokenPrefix: fcmToken.substring(0, 20) + '...',
     });
+
+    // Log specifically for admin users
+    if (isAdmin) {
+      logger.info('Admin user FCM token updated - admin will receive push notifications', {
+        userId,
+        email: user.email,
+        role: user.role,
+        tokenPrefix: fcmToken.substring(0, 20) + '...',
+      });
+    }
   }
 
   /**

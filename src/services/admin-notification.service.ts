@@ -8,47 +8,67 @@ import webSocketService from './websocket.service.js';
 // Firebase admin for push notifications
 let firebaseAdmin: typeof import('firebase-admin') | null = null;
 
-// Lazy initialize Firebase Admin
-async function getFirebaseAdmin() {
+// Initialize Firebase Admin SDK at module load (eager initialization)
+async function initializeFirebaseAdmin() {
   if (firebaseAdmin) return firebaseAdmin;
 
   try {
     const admin = await import('firebase-admin');
     
-    if (!admin.default.apps.length) {
-      // Use config-based credentials (same as notification.service.ts)
-      const hasProjectId = !!config.firebase.projectId;
-      const hasPrivateKey = !!config.firebase.privateKey;
-      const hasClientEmail = !!config.firebase.clientEmail;
-      
-      logger.info('Firebase credentials check', { hasProjectId, hasPrivateKey, hasClientEmail });
-      
-      if (hasProjectId && hasPrivateKey && hasClientEmail) {
-        admin.default.initializeApp({
-          credential: admin.default.credential.cert({
-            projectId: config.firebase.projectId,
-            privateKey: config.firebase.privateKey,
-            clientEmail: config.firebase.clientEmail,
-          }),
-        });
-        logger.info('Firebase Admin SDK initialized for admin notifications', { projectId: config.firebase.projectId });
-      } else {
-        logger.warn('Firebase credentials not configured - admin push notifications disabled', {
-          hasProjectId,
-          hasPrivateKey: hasPrivateKey ? 'yes (length: ' + config.firebase.privateKey.length + ')' : 'no',
-          hasClientEmail,
-        });
-        return null;
-      }
+    // Check if Firebase is already initialized
+    if (admin.default.apps.length > 0) {
+      firebaseAdmin = admin.default;
+      logger.info('Firebase Admin SDK already initialized, reusing existing instance');
+      return firebaseAdmin;
     }
+
+    // Check if credentials are configured
+    const hasProjectId = !!config.firebase.projectId;
+    const hasPrivateKey = !!config.firebase.privateKey;
+    const hasClientEmail = !!config.firebase.clientEmail;
     
-    firebaseAdmin = admin.default;
-    return firebaseAdmin;
+    logger.info('Initializing Firebase Admin SDK for admin notifications', { 
+      hasProjectId, 
+      hasPrivateKey, 
+      hasClientEmail 
+    });
+    
+    if (hasProjectId && hasPrivateKey && hasClientEmail) {
+      admin.default.initializeApp({
+        credential: admin.default.credential.cert({
+          projectId: config.firebase.projectId,
+          privateKey: config.firebase.privateKey,
+          clientEmail: config.firebase.clientEmail,
+        }),
+      });
+      firebaseAdmin = admin.default;
+      logger.info('Firebase Admin SDK initialized successfully for admin notifications', { 
+        projectId: config.firebase.projectId 
+      });
+      return firebaseAdmin;
+    } else {
+      logger.warn('Firebase credentials not configured - admin push notifications disabled', {
+        hasProjectId,
+        hasPrivateKey: hasPrivateKey ? 'yes (length: ' + config.firebase.privateKey.length + ')' : 'no',
+        hasClientEmail,
+      });
+      return null;
+    }
   } catch (error) {
-    logger.error('Firebase Admin initialization failed', { error });
+    logger.error('Firebase Admin SDK initialization failed', { error });
     return null;
   }
 }
+
+// Get Firebase Admin instance (returns already initialized instance)
+function getFirebaseAdmin() {
+  return firebaseAdmin;
+}
+
+// Initialize Firebase on module load
+initializeFirebaseAdmin().catch((error) => {
+  logger.error('Failed to initialize Firebase Admin SDK at startup', { error });
+});
 
 export class AdminNotificationService {
   /**
@@ -61,6 +81,12 @@ export class AdminNotificationService {
     data?: Record<string, unknown>;
     sendPush?: boolean;
   }): Promise<AdminNotification> {
+    logger.info('Creating admin notification', {
+      type: data.type,
+      title: data.title,
+      sendPush: data.sendPush !== false,
+    });
+
     const notification = await prisma.adminNotification.create({
       data: {
         type: data.type,
@@ -70,21 +96,53 @@ export class AdminNotificationService {
       },
     });
 
-    logger.info('Admin notification created', { notificationId: notification.id, type: data.type });
-
-    // Emit WebSocket notification to connected admins
-    webSocketService.emitAdminNotification({
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification.data as Record<string, unknown> | undefined,
+    logger.info('Admin notification created in database', { 
+      notificationId: notification.id, 
+      type: data.type,
       createdAt: notification.createdAt.toISOString(),
     });
 
+    // Emit WebSocket notification to connected admins
+    try {
+      webSocketService.emitAdminNotification({
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        data: notification.data as Record<string, unknown> | undefined,
+        createdAt: notification.createdAt.toISOString(),
+      });
+      logger.info('Admin notification emitted via WebSocket', {
+        notificationId: notification.id,
+        connectedAdmins: webSocketService.getConnectedAdminsCount(),
+      });
+    } catch (error) {
+      logger.error('Failed to emit WebSocket notification', {
+        notificationId: notification.id,
+        error,
+      });
+      // Don't fail notification creation if WebSocket fails
+    }
+
     // Send push notification to all admins
     if (data.sendPush !== false) {
-      await this.sendPushToAdmins(data.title, data.message, data.data);
+      try {
+        await this.sendPushToAdmins(data.title, data.message, data.data);
+        logger.info('Push notification process completed', {
+          notificationId: notification.id,
+          type: data.type,
+        });
+      } catch (error) {
+        logger.error('Failed to send push notification', {
+          notificationId: notification.id,
+          error,
+        });
+        // Don't fail notification creation if push fails
+      }
+    } else {
+      logger.info('Push notification skipped (sendPush=false)', {
+        notificationId: notification.id,
+      });
     }
 
     return notification;
@@ -101,7 +159,12 @@ export class AdminNotificationService {
     try {
       logger.info('Attempting to send push notification to admins', { title, body });
       
-      const firebase = await getFirebaseAdmin();
+      // Ensure Firebase is initialized (should already be initialized at startup)
+      if (!firebaseAdmin) {
+        await initializeFirebaseAdmin();
+      }
+      
+      const firebase = getFirebaseAdmin();
       if (!firebase) {
         logger.warn('Firebase not initialized, skipping push notification. Check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY env vars.');
         return;
@@ -159,27 +222,50 @@ export class AdminNotificationService {
       };
 
       const response = await firebase.messaging().sendEachForMulticast(message);
-      logger.info('Admin push notification sent', {
+      
+      logger.info('Admin push notification delivery status', {
         successCount: response.successCount,
         failureCount: response.failureCount,
+        totalTokens: tokens.length,
+        adminEmails: admins.map(a => a.email),
       });
 
-      // Remove invalid tokens
+      // Log detailed failure information
       if (response.failureCount > 0) {
         const failedTokens: string[] = [];
+        const failureDetails: Array<{ token: string; error: string }> = [];
+        
         response.responses.forEach((resp: any, idx: number) => {
           if (!resp.success) {
             failedTokens.push(tokens[idx]);
+            failureDetails.push({
+              token: tokens[idx].substring(0, 20) + '...',
+              error: resp.error?.message || 'Unknown error',
+            });
           }
         });
 
+        logger.warn('Some push notifications failed', {
+          failedCount: failedTokens.length,
+          failures: failureDetails,
+        });
+
+        // Remove invalid tokens from database
         if (failedTokens.length > 0) {
           await prisma.user.updateMany({
             where: { fcmToken: { in: failedTokens } },
             data: { fcmToken: null },
           });
-          logger.info('Removed invalid FCM tokens', { count: failedTokens.length });
+          logger.info('Removed invalid FCM tokens from database', { count: failedTokens.length });
         }
+      }
+
+      // Log successful deliveries
+      if (response.successCount > 0) {
+        logger.info('Push notifications successfully delivered to admins', {
+          count: response.successCount,
+          adminEmails: admins.slice(0, response.successCount).map(a => a.email),
+        });
       }
     } catch (error) {
       logger.error('Failed to send admin push notification', { error });

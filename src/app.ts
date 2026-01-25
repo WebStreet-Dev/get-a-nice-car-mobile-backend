@@ -14,6 +14,10 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { startAppointmentReminderJob } from './jobs/appointment-reminders.job.js';
 import webSocketService from './services/websocket.service.js';
 
+// Import admin notification service early to trigger Firebase initialization at startup
+// This ensures Firebase Admin SDK is initialized before the server starts
+import './services/admin-notification.service.js';
+
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

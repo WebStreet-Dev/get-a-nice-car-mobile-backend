@@ -3,6 +3,7 @@ import userService from '../services/user.service.js';
 import { sendSuccess } from '../utils/response.js';
 import { AuthRequest } from '../types/index.js';
 import { UpdateProfileInput, UpdateFcmTokenInput } from '../validators/user.validator.js';
+import logger from '../utils/logger.js';
 
 export class UserController {
   /**
@@ -51,9 +52,28 @@ export class UserController {
   ): Promise<void> {
     try {
       const { fcmToken } = req.body as UpdateFcmTokenInput;
+      
+      // Additional validation (validator already checks for presence, but add extra checks)
+      if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim().length === 0) {
+        return next(new Error('FCM token is required and must be a non-empty string'));
+      }
+
+      // Validate token format (FCM tokens are typically long strings)
+      if (fcmToken.length < 50) {
+        logger.warn('FCM token seems too short', { 
+          userId: req.user!.id, 
+          tokenLength: fcmToken.length 
+        });
+        // Don't fail, but log warning - some tokens might be shorter
+      }
+
       await userService.updateFcmToken(req.user!.id, fcmToken);
       sendSuccess(res, null, 'FCM token updated successfully');
     } catch (error) {
+      logger.error('Failed to update FCM token', { 
+        userId: req.user!.id, 
+        error: error instanceof Error ? error.message : error 
+      });
       next(error);
     }
   }

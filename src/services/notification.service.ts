@@ -149,7 +149,7 @@ export class NotificationService {
     }
   ): Promise<boolean> {
     if (!firebaseAdmin) {
-      logger.debug('Firebase not initialized, skipping push notification');
+      logger.debug('Firebase not initialized, skipping push notification', { userId });
       return false;
     }
 
@@ -157,13 +157,25 @@ export class NotificationService {
       // Get user's FCM token
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { fcmToken: true },
+        select: { fcmToken: true, email: true, role: true },
       });
 
       if (!user?.fcmToken) {
-        logger.debug('User has no FCM token', { userId });
+        logger.debug('User has no FCM token, skipping push notification', { 
+          userId,
+          email: user?.email,
+          role: user?.role,
+        });
         return false;
       }
+
+      logger.info('Sending push notification to user', {
+        userId,
+        email: user.email,
+        role: user.role,
+        title: payload.title,
+        tokenPrefix: user.fcmToken.substring(0, 20) + '...',
+      });
 
       // Send notification
       await firebaseAdmin.messaging().send({
@@ -194,10 +206,18 @@ export class NotificationService {
         },
       });
 
-      logger.info('Push notification sent', { userId });
+      logger.info('Push notification sent successfully', { 
+        userId,
+        email: user.email,
+        title: payload.title,
+      });
       return true;
     } catch (error) {
-      logger.error('Failed to send push notification', { userId, error });
+      logger.error('Failed to send push notification', { 
+        userId, 
+        error: error instanceof Error ? error.message : error,
+        title: payload.title,
+      });
       return false;
     }
   }
