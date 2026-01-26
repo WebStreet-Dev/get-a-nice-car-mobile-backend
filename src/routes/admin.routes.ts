@@ -341,6 +341,15 @@ router.put('/alerts/:id/read', adminController.markAdminNotificationRead.bind(ad
  */
 router.put('/alerts/read-all', adminController.markAllAdminNotificationsRead.bind(adminController));
 
+// ==================== DIAGNOSTICS ====================
+
+/**
+ * @route   GET /api/v1/admin/diagnostics/fcm-tokens
+ * @desc    Get diagnostic information about admin FCM tokens
+ * @access  Admin
+ */
+router.get('/diagnostics/fcm-tokens', adminController.getFcmTokenDiagnostics.bind(adminController));
+
 // ==================== ROLES ====================
 
 /**

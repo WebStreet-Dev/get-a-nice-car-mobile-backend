@@ -67,7 +67,21 @@ export class UserController {
         // Don't fail, but log warning - some tokens might be shorter
       }
 
+      logger.info('FCM token update request received', {
+        userId: req.user!.id,
+        email: req.user!.email,
+        role: req.user!.role,
+        tokenLength: fcmToken.length,
+        tokenPrefix: fcmToken.substring(0, 20) + '...',
+      });
+
       await userService.updateFcmToken(req.user!.id, fcmToken);
+      
+      logger.info('FCM token update completed successfully', {
+        userId: req.user!.id,
+        email: req.user!.email,
+      });
+      
       sendSuccess(res, null, 'FCM token updated successfully');
     } catch (error) {
       logger.error('Failed to update FCM token', { 

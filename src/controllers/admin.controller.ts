@@ -638,6 +638,51 @@ export class AdminController {
     }
   }
 
+  /**
+   * Get diagnostic information about admin FCM tokens
+   * GET /api/v1/admin/diagnostics/fcm-tokens
+   */
+  async getFcmTokenDiagnostics(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const admins = await prisma.user.findMany({
+        where: {
+          role: { in: [Role.ADMIN, Role.SUPER_ADMIN] },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          fcmToken: true,
+          updatedAt: true,
+        },
+        orderBy: { email: 'asc' },
+      });
+
+      const diagnostics = {
+        totalAdmins: admins.length,
+        adminsWithTokens: admins.filter(a => a.fcmToken !== null).length,
+        adminsWithoutTokens: admins.filter(a => a.fcmToken === null).length,
+        admins: admins.map(admin => ({
+          email: admin.email,
+          role: admin.role,
+          hasToken: admin.fcmToken !== null,
+          tokenLength: admin.fcmToken?.length || 0,
+          tokenPrefix: admin.fcmToken ? admin.fcmToken.substring(0, 20) + '...' : null,
+          lastUpdated: admin.updatedAt.toISOString(),
+        })),
+      };
+
+      sendSuccess(res, diagnostics);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ==================== NOTIFICATIONS ====================
 
   /**
