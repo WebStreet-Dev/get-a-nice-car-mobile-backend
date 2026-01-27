@@ -350,6 +350,13 @@ router.put('/alerts/read-all', adminController.markAllAdminNotificationsRead.bin
  */
 router.get('/diagnostics/fcm-tokens', adminController.getFcmTokenDiagnostics.bind(adminController));
 
+/**
+ * @route   GET /api/v1/admin/diagnostics/firebase
+ * @desc    Get diagnostic information about Firebase Admin SDK status
+ * @access  Admin
+ */
+router.get('/diagnostics/firebase', adminController.getFirebaseDiagnostics.bind(adminController));
+
 // ==================== ROLES ====================
 
 /**

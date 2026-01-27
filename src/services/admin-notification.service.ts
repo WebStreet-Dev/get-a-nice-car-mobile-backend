@@ -65,10 +65,81 @@ function getFirebaseAdmin() {
   return firebaseAdmin;
 }
 
+/**
+ * Validate Firebase Admin SDK credentials
+ * Tests if credentials are valid by attempting to access messaging service
+ */
+export async function validateFirebaseCredentials(): Promise<{
+  isValid: boolean;
+  error?: string;
+  details?: Record<string, unknown>;
+}> {
+  try {
+    const firebase = await initializeFirebaseAdmin();
+    if (!firebase) {
+      return {
+        isValid: false,
+        error: 'Firebase Admin SDK not initialized - credentials missing or invalid',
+        details: {
+          hasProjectId: !!config.firebase.projectId,
+          hasPrivateKey: !!config.firebase.privateKey,
+          hasClientEmail: !!config.firebase.clientEmail,
+        },
+      };
+    }
+    
+    // Try to access messaging service (this will fail if credentials are invalid)
+    try {
+      const messaging = firebase.messaging();
+      // If we get here without error, credentials are valid
+      return {
+        isValid: true,
+        details: {
+          projectId: config.firebase.projectId,
+          clientEmail: config.firebase.clientEmail,
+        },
+      };
+    } catch (error: any) {
+      return {
+        isValid: false,
+        error: 'Firebase Admin SDK credentials invalid - cannot access messaging service',
+        details: {
+          errorMessage: error.message,
+          errorCode: error.code,
+        },
+      };
+    }
+  } catch (error: any) {
+    return {
+      isValid: false,
+      error: 'Firebase Admin SDK initialization failed',
+      details: {
+        errorMessage: error.message,
+        errorCode: error.code,
+      },
+    };
+  }
+}
+
 // Initialize Firebase on module load
-initializeFirebaseAdmin().catch((error) => {
-  logger.error('Failed to initialize Firebase Admin SDK at startup', { error });
-});
+initializeFirebaseAdmin()
+  .then(async (firebase) => {
+    if (firebase) {
+      // Validate credentials after initialization
+      const validation = await validateFirebaseCredentials();
+      if (validation.isValid) {
+        logger.info('Firebase Admin SDK credentials validated successfully');
+      } else {
+        logger.error('Firebase Admin SDK credentials validation failed', {
+          error: validation.error,
+          details: validation.details,
+        });
+      }
+    }
+  })
+  .catch((error) => {
+    logger.error('Failed to initialize Firebase Admin SDK at startup', { error });
+  });
 
 export class AdminNotificationService {
   /**
@@ -169,6 +240,17 @@ export class AdminNotificationService {
         logger.warn('Firebase not initialized, skipping push notification. Check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY env vars.');
         return;
       }
+      
+      // Validate Firebase credentials before attempting to send
+      const validation = await validateFirebaseCredentials();
+      if (!validation.isValid) {
+        logger.error('Firebase Admin SDK credentials invalid - cannot send push notifications', {
+          error: validation.error,
+          details: validation.details,
+          action: 'Verify Firebase Admin SDK credentials and ensure Cloud Messaging API is enabled',
+        });
+        return;
+      }
 
       // Get all admin and super admin FCM tokens
       const admins = await prisma.user.findMany({
@@ -221,7 +303,25 @@ export class AdminNotificationService {
         tokens,
       };
 
-      const response = await firebase.messaging().sendEachForMulticast(message);
+      let response;
+      try {
+        response = await firebase.messaging().sendEachForMulticast(message);
+      } catch (error: any) {
+        // Check if this is a Firebase Admin SDK authentication error
+        const errorMessage = (error?.message || '').toLowerCase();
+        if (errorMessage.includes('authentication credential') || 
+            errorMessage.includes('oauth') ||
+            errorMessage.includes('unauthorized') ||
+            error?.code === 'UNAUTHENTICATED') {
+          logger.error('Firebase Admin SDK authentication error when sending push notification', {
+            error: error.message,
+            errorCode: error.code,
+            action: 'Check Firebase Admin SDK credentials. The service account may need Cloud Messaging API enabled or credentials may be expired.',
+          });
+          return; // Don't attempt to process response if send failed
+        }
+        throw error; // Re-throw if it's a different error
+      }
       
       logger.info('Admin push notification delivery status', {
         successCount: response.successCount,
@@ -233,30 +333,103 @@ export class AdminNotificationService {
       // Log detailed failure information
       if (response.failureCount > 0) {
         const failedTokens: string[] = [];
-        const failureDetails: Array<{ token: string; error: string }> = [];
+        const authErrors: string[] = [];
+        const failureDetails: Array<{ token: string; error: string; type: string }> = [];
+        
+        // Helper function to determine if error indicates invalid token
+        const isInvalidTokenError = (error: any): boolean => {
+          const errorCode = error?.code || '';
+          const errorMessage = (error?.message || '').toLowerCase();
+          
+          // Firebase Admin SDK authentication errors - DON'T remove token
+          const authErrorIndicators = [
+            'authentication credential',
+            'oauth',
+            'oauth2',
+            'unauthorized',
+            'permission denied',
+            'credential',
+            'unauthenticated',
+          ];
+          
+          if (authErrorIndicators.some(indicator => errorMessage.includes(indicator))) {
+            return false; // This is an auth error, not an invalid token
+          }
+          
+          // Invalid FCM token errors - DO remove token
+          const invalidTokenErrors = [
+            'invalid-registration-token',
+            'registration-token-not-registered',
+            'invalid-argument',
+            'unregistered',
+            'messaging/invalid-registration-token',
+            'messaging/registration-token-not-registered',
+          ];
+          
+          return invalidTokenErrors.some(code => 
+            errorCode.toLowerCase().includes(code.toLowerCase()) || 
+            errorMessage.includes(code.toLowerCase())
+          );
+        };
         
         response.responses.forEach((resp: any, idx: number) => {
           if (!resp.success) {
-            failedTokens.push(tokens[idx]);
-            failureDetails.push({
-              token: tokens[idx].substring(0, 20) + '...',
-              error: resp.error?.message || 'Unknown error',
-            });
+            const error = resp.error;
+            const errorCode = error?.code || '';
+            const errorMessage = error?.message || 'Unknown error';
+            
+            if (isInvalidTokenError(error)) {
+              // This is a truly invalid token - remove it
+              failedTokens.push(tokens[idx]);
+              failureDetails.push({
+                token: tokens[idx].substring(0, 20) + '...',
+                error: errorMessage,
+                type: 'invalid_token',
+              });
+            } else {
+              // This is likely a Firebase Admin SDK auth error - don't remove token
+              authErrors.push(tokens[idx]);
+              failureDetails.push({
+                token: tokens[idx].substring(0, 20) + '...',
+                error: errorMessage,
+                type: 'auth_error',
+              });
+              
+              logger.error('Firebase Admin SDK authentication error - NOT removing token', {
+                token: tokens[idx].substring(0, 20) + '...',
+                error: errorMessage,
+                errorCode: errorCode,
+                action: 'Check Firebase Admin SDK credentials in environment variables (FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL)',
+              });
+            }
           }
         });
 
-        logger.warn('Some push notifications failed', {
-          failedCount: failedTokens.length,
+        logger.warn('Push notification delivery failures', {
+          totalFailures: response.failureCount,
+          invalidTokens: failedTokens.length,
+          authErrors: authErrors.length,
           failures: failureDetails,
         });
 
-        // Remove invalid tokens from database
+        // Only remove truly invalid tokens from database
         if (failedTokens.length > 0) {
           await prisma.user.updateMany({
             where: { fcmToken: { in: failedTokens } },
             data: { fcmToken: null },
           });
-          logger.info('Removed invalid FCM tokens from database', { count: failedTokens.length });
+          logger.info('Removed invalid FCM tokens from database', { 
+            count: failedTokens.length,
+            reason: 'Tokens are invalid or unregistered',
+          });
+        }
+        
+        // Log auth errors separately
+        if (authErrors.length > 0) {
+          logger.error('Firebase Admin SDK authentication errors detected - tokens preserved', {
+            count: authErrors.length,
+            action: 'Verify Firebase Admin SDK credentials are correct and Cloud Messaging API is enabled',
+          });
         }
       }
 

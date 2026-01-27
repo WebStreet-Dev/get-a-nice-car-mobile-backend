@@ -683,6 +683,45 @@ export class AdminController {
     }
   }
 
+  /**
+   * Get diagnostic information about Firebase Admin SDK
+   * GET /api/v1/admin/diagnostics/firebase
+   */
+  async getFirebaseDiagnostics(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { validateFirebaseCredentials } = await import('../services/admin-notification.service.js');
+      const config = await import('../config/index.js');
+      const firebaseConfig = config.default.firebase;
+      
+      const validation = await validateFirebaseCredentials();
+      
+      const diagnostics = {
+        credentials: {
+          hasProjectId: !!firebaseConfig.projectId,
+          hasPrivateKey: !!firebaseConfig.privateKey,
+          hasClientEmail: !!firebaseConfig.clientEmail,
+          projectId: firebaseConfig.projectId || null,
+          clientEmail: firebaseConfig.clientEmail || null,
+          privateKeyLength: firebaseConfig.privateKey?.length || 0,
+        },
+        status: validation.isValid ? 'valid' : 'invalid',
+        message: validation.isValid 
+          ? 'Firebase Admin SDK is properly initialized and credentials are valid'
+          : validation.error || 'Firebase Admin SDK credentials are invalid',
+        error: validation.error || null,
+        details: validation.details || null,
+      };
+
+      sendSuccess(res, diagnostics);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ==================== NOTIFICATIONS ====================
 
   /**
