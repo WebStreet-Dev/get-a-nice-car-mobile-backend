@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User, Role, AccountStatus, NotificationType } from '@prisma/client';
+import { User, Role, AccountStatus, NotificationType, UserType } from '@prisma/client';
 import prisma from './prisma.service.js';
 import config from '../config/index.js';
 import { AppError, UnauthorizedError, NotFoundError } from '../middleware/errorHandler.js';
@@ -371,6 +371,30 @@ export class AuthService {
     });
 
     logger.info('Password force changed', { userId });
+  }
+
+  /**
+   * Permanently delete the current user's account (self-service).
+   * Only CLIENT users (app-registered) can delete their own account; employees are admin-managed.
+   */
+  async deleteAccount(userId: string): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User');
+    }
+
+    if (user.userType !== UserType.CLIENT) {
+      throw new AppError('Only app-registered accounts can be deleted from the app. Contact your administrator.', 403);
+    }
+
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    logger.info('Account deleted', { userId, email: user.email });
   }
 
   /**

@@ -91,6 +91,17 @@ router.get(
   authController.me.bind(authController)
 );
 
+/**
+ * @route   DELETE /api/v1/auth/account
+ * @desc    Permanently delete current user account (self-service)
+ * @access  Private
+ */
+router.delete(
+  '/account',
+  authenticate,
+  authController.deleteAccount.bind(authController)
+);
+
 export default router;
 
 

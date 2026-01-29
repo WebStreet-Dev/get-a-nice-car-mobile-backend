@@ -155,6 +155,24 @@ export class AuthController {
       next(error);
     }
   }
+
+  /**
+   * Delete current user account (self-service, permanent deletion)
+   * DELETE /api/v1/auth/account
+   */
+  async deleteAccount(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      await authService.deleteAccount(req.user!.id);
+
+      sendSuccess(res, null, 'Account deleted successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const authController = new AuthController();
