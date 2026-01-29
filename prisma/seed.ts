@@ -120,20 +120,20 @@ async function main() {
   // Create FAQs
   const faqs = [
     {
-      question: 'What financing options do you offer?',
-      answer: 'We offer various financing options including traditional loans, lease options, and special promotions. Our finance team can help you find the best option for your budget.',
+      question: 'How does it work?',
+      answer: 'We are a REAL buy here pay here. No credit check. Payments will be for a very short time. WHAT YOU WLL NEED : Drivers license, 20 - 25% down payment (in most cases), and insurance.... If you can afford the payments for that short of a time... This car is yours. (There are exceptions)',
       category: FAQCategory.SALES,
       sortOrder: 1,
     },
     {
-      question: 'Do you offer vehicle warranties?',
-      answer: 'Yes, we offer comprehensive warranty packages for both new and used vehicles. Our service team can explain the different warranty options available.',
+      question: 'Is there a Warranty?',
+      answer: 'Yes, almost all vehicles include a FREE one year bumper, bumper, limited warranty. and FREE oil changes for the life of the loan. Also, most of the vehicles include FREE towing for UP to 50 miles radius (there are exceptions).',
       category: FAQCategory.SERVICE,
       sortOrder: 2,
     },
     {
       question: 'What are your business hours?',
-      answer: 'We are open Monday through Saturday from 9 AM to 7 PM, and Sunday from 10 AM to 5 PM. Our service department hours may vary.',
+      answer: 'Monday to Friday - 9 AM - 7 PM, Saturday - 9AM to 5PM, Sunday - 10AM to 5PM',
       category: FAQCategory.GENERAL,
       sortOrder: 3,
     },
@@ -145,7 +145,7 @@ async function main() {
     },
     {
       question: 'What payment methods do you accept?',
-      answer: 'We accept cash, credit cards, debit cards, and financing options. For more information about payment methods, please contact our accounting department.',
+      answer: 'At the moment we accept debit card, credit card, apple pay Zelle, android tap pay, bank transfers. And more. WE DO NOT accept AMEX',
       category: FAQCategory.ACCOUNTING,
       sortOrder: 5,
     },
