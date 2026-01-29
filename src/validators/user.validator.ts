@@ -7,9 +7,13 @@ export const updateProfileSchema = z.object({
     .max(100, 'Name must be less than 100 characters')
     .optional(),
   phone: z
-    .string()
-    .min(10, 'Phone number must be at least 10 characters')
-    .max(20, 'Phone number must be less than 20 characters')
+    .union([
+      z.literal(''),
+      z
+        .string()
+        .min(10, 'Phone number must be at least 10 characters')
+        .max(20, 'Phone number must be less than 20 characters'),
+    ])
     .optional(),
 });
 

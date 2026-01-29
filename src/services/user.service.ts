@@ -30,8 +30,8 @@ export class UserService {
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
-        ...(data.name && { name: data.name }),
-        ...(data.phone && { phone: data.phone }),
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.phone !== undefined && { phone: data.phone }),
       },
     });
 

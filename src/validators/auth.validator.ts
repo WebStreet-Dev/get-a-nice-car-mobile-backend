@@ -11,8 +11,12 @@ export const registerSchema = z.object({
     .toLowerCase(),
   phone: z
     .string()
-    .min(10, 'Phone number must be at least 10 characters')
-    .max(20, 'Phone number must be less than 20 characters'),
+    .max(20, 'Phone number must be less than 20 characters')
+    .refine((val) => val === '' || val.length >= 10, {
+      message: 'Phone must be at least 10 characters when provided',
+    })
+    .optional()
+    .default(''),
   password: z
     .string()
     .min(6, 'Password must be at least 6 characters')
