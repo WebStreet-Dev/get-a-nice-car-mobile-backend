@@ -22,12 +22,16 @@ export const config = {
   },
 
   // CORS
-  corsOrigin: process.env.CORS_ORIGIN?.split(',') || [
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'https://admin.nicecarinc.cloud',
-    'http://admin.nicecarinc.cloud',
-    'http://nice-car-inc-prod-backend-nice-car-inc-a-588512-31-220-109-16.traefik.me',
+  // CORS
+  corsOrigin: [
+    ...new Set([
+      ...(process.env.CORS_ORIGIN?.split(',') || []),
+      'http://localhost:3001',
+      'http://localhost:5173',
+      'https://admin.nicecarinc.cloud',
+      'http://admin.nicecarinc.cloud',
+      'http://nice-car-inc-prod-backend-nice-car-inc-a-588512-31-220-109-16.traefik.me',
+    ]),
   ],
 
   // Firebase
