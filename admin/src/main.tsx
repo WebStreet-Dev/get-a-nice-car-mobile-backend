@@ -25,7 +25,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           },
         }}
       >
-        <BrowserRouter>
+        <BrowserRouter basename="/v1/admin">
           <App />
         </BrowserRouter>
       </ConfigProvider>

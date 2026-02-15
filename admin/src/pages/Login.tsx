@@ -70,9 +70,19 @@ export default function LoginPage() {
           </Form.Item>
         </Form>
 
-        <Text type="secondary" style={{ display: 'block', textAlign: 'center', fontSize: 12 }}>
-          Default: admin@getanicecar.com / admin123456
-        </Text>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Designed and developed by{' '}
+            <a
+              href="https://webstreet.dev/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#1890ff', fontWeight: 500 }}
+            >
+              WebStreet.Dev
+            </a>
+          </Text>
+        </div>
       </Card>
     </div>
   );
