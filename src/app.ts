@@ -17,6 +17,7 @@ import webSocketService from './services/websocket.service.js';
 // Import admin notification service early to trigger Firebase initialization at startup
 // This ensures Firebase Admin SDK is initialized before the server starts
 import './services/admin-notification.service.js';
+import cloudinaryService from './services/cloudinary.service.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -158,6 +159,12 @@ webSocketService.initialize(httpServer);
 
 // Start server
 const PORT = config.port;
+
+// In production, require Cloudinary so image uploads persist across redeploys
+if (config.nodeEnv === 'production' && !cloudinaryService.isConfigured()) {
+  logger.error('Production requires Cloudinary. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.');
+  process.exit(1);
+}
 
 httpServer.listen(PORT, () => {
   logger.info(`🚀 Server is running on port ${PORT}`);

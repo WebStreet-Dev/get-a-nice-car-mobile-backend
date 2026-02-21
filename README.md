@@ -88,6 +88,19 @@ When deploying a new version (e.g. after adding routes like device-token):
 
 If you see **404 for POST /api/v1/device-token**, the running server is likely using an old build; redeploy with the steps above and restart.
 
+### Production: Image uploads (Cloudinary)
+
+In **production**, image uploads (e.g. sales person photos) require **Cloudinary** so images persist across redeploys and restarts. Without Cloudinary, the server uses local disk and images are lost on redeploy.
+
+Set these environment variables in production:
+
+- `CLOUDINARY_CLOUD_NAME` – your Cloudinary cloud name
+- `CLOUDINARY_API_KEY` – API key
+- `CLOUDINARY_API_SECRET` – API secret
+- `CLOUDINARY_FOLDER` – (optional) folder name, default `nicecar`
+
+If these are not set in production, upload requests will fail with a 503 and a clear error message (no silent fallback to local storage). In development, local storage is still used when Cloudinary is not configured.
+
 ## API Endpoints
 
 ### Authentication (`/api/v1/auth`)

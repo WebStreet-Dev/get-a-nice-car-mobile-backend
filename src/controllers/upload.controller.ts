@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthRequest } from '../types/index.js';
+import config from '../config/index.js';
 import cloudinaryService from '../services/cloudinary.service.js';
 import { logger } from '../utils/logger.js';
 
@@ -99,25 +100,39 @@ export class UploadController {
 
       let fileUrl: string;
       let shouldDeleteLocalFile = false;
+      const isProduction = config.nodeEnv === 'production';
+
+      // In production, require Cloudinary so images persist across redeploys (no local fallback)
+      if (isProduction && !cloudinaryService.isConfigured()) {
+        sendError(
+          res,
+          'Image storage not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in production.',
+          503
+        );
+        return;
+      }
 
       // Try to upload to Cloudinary first (if configured)
       if (cloudinaryService.isConfigured()) {
         logger.info('Attempting to upload to Cloudinary...');
         const cloudinaryUrl = await cloudinaryService.uploadImage(filePath, req.file.originalname);
-        
+
         if (cloudinaryUrl) {
-          // Successfully uploaded to Cloudinary
           fileUrl = cloudinaryUrl;
-          shouldDeleteLocalFile = true; // Clean up local file after cloud upload
+          shouldDeleteLocalFile = true;
           logger.info('Image uploaded to Cloudinary successfully', { url: cloudinaryUrl });
         } else {
-          // Cloudinary upload failed, fall back to local storage
+          // Cloudinary upload failed
+          if (isProduction) {
+            sendError(res, 'Image upload failed. Please try again.', 500);
+            return;
+          }
           logger.warn('Cloudinary upload failed, falling back to local storage');
           const baseUrl = req.protocol + '://' + req.get('host');
           fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
         }
       } else {
-        // Cloudinary not configured, use local storage
+        // Development only: Cloudinary not configured, use local storage
         const baseUrl = req.protocol + '://' + req.get('host');
         fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
       }
