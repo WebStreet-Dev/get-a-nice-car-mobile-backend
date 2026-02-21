@@ -61,14 +61,30 @@ export const config = {
   },
 
   // Cloudinary (for production image storage)
-  // Set these in production to enable cloud storage
-  // Images will fall back to local storage if not configured
-  cloudinary: {
-    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
-    apiKey: process.env.CLOUDINARY_API_KEY || '',
-    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
-    folder: process.env.CLOUDINARY_FOLDER || 'nicecar',
-  },
+  // Use either CLOUDINARY_URL (single var) or the three separate vars below
+  // CLOUDINARY_URL format: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+  cloudinary: (() => {
+    const url = process.env.CLOUDINARY_URL;
+    if (url && url.startsWith('cloudinary://')) {
+      try {
+        const parsed = new URL(url);
+        return {
+          cloudName: parsed.hostname || '',
+          apiKey: decodeURIComponent(parsed.username || ''),
+          apiSecret: decodeURIComponent(parsed.password || ''),
+          folder: process.env.CLOUDINARY_FOLDER || 'nicecar',
+        };
+      } catch {
+        // fall through to individual vars
+      }
+    }
+    return {
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+      apiKey: process.env.CLOUDINARY_API_KEY || '',
+      apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+      folder: process.env.CLOUDINARY_FOLDER || 'nicecar',
+    };
+  })(),
 };
 
 export default config;

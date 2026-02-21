@@ -92,12 +92,16 @@ If you see **404 for POST /api/v1/device-token**, the running server is likely u
 
 In **production**, image uploads (e.g. sales person photos) require **Cloudinary** so images persist across redeploys and restarts. Without Cloudinary, the server uses local disk and images are lost on redeploy.
 
-Set these environment variables in production:
+Set **either** the single URL **or** the three separate variables:
 
-- `CLOUDINARY_CLOUD_NAME` – your Cloudinary cloud name
-- `CLOUDINARY_API_KEY` – API key
-- `CLOUDINARY_API_SECRET` – API secret
-- `CLOUDINARY_FOLDER` – (optional) folder name, default `nicecar`
+- **Option A – single URL (recommended):**  
+  `CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME`  
+  Example: `CLOUDINARY_URL=cloudinary://639587656926189:YOUR_SECRET@dv5iestdo`
+
+- **Option B – separate variables:**  
+  `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+
+- **Optional (both options):** `CLOUDINARY_FOLDER` – folder name, default `nicecar`
 
 If these are not set in production, upload requests will fail with a 503 and a clear error message (no silent fallback to local storage). In development, local storage is still used when Cloudinary is not configured.
 

@@ -139,11 +139,13 @@ app.use('/api/v1/admin', (req, res, next) => {
 
 // Serve admin panel for non-API routes (React Router fallback)
 app.get('*', (req, res, next) => {
-  // Don't serve admin panel for API routes
   if (req.path.startsWith('/api')) {
     return next();
   }
-  // Serve admin panel index.html for all other routes
+  // Missing /uploads files fall through from express.static; return 404, don't serve admin
+  if (req.path.startsWith('/uploads')) {
+    return next();
+  }
   res.sendFile(path.join(adminDistPath, 'index.html'));
 });
 
