@@ -51,8 +51,15 @@ export class CloudinaryService {
       });
 
       return result.secure_url;
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; http_code?: number };
       logger.error('Cloudinary upload error:', error as object);
+      if (err?.message?.includes('Invalid Signature') || err?.http_code === 401) {
+        logger.warn(
+          'Cloudinary 401 Invalid Signature: verify CLOUDINARY_API_SECRET matches the Dashboard (Settings → API Keys), ' +
+          'and that server clock is in sync (e.g. NTP). No spaces or quotes in env values.'
+        );
+      }
       return null;
     }
   }

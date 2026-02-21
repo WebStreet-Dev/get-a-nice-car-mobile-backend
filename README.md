@@ -101,6 +101,8 @@ Set these environment variables in production:
 
 If these are not set in production, upload requests will fail with a 503 and a clear error message (no silent fallback to local storage). In development, local storage is still used when Cloudinary is not configured.
 
+**If you see "Invalid Signature" (401) from Cloudinary:** Check that `CLOUDINARY_API_SECRET` exactly matches the API Secret in [Cloudinary Dashboard → Settings → API Keys](https://console.cloudinary.com/settings/api-keys) (no extra spaces or quotes). Also ensure the server clock is correct (e.g. NTP synced); wrong time causes signature rejection.
+
 ## API Endpoints
 
 ### Authentication (`/api/v1/auth`)
