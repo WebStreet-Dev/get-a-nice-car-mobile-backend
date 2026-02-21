@@ -83,7 +83,7 @@ When deploying a new version (e.g. after adding routes like device-token):
 
 1. Pull the latest code.
 2. Run `npm run build` so `dist/` includes all routes (e.g. `dist/routes/device-token.routes.js`).
-3. If the Prisma schema changed: run `npm run db:migrate:prod` to apply migrations, then `npm run db:generate` (build usually runs generate).
+3. If the Prisma schema changed: run **`npm run db:migrate:prod`** only. This applies pending migrations (e.g. creates new tables like `device_tokens`) and **does not modify or delete existing data**. Do **not** run `db:seed` or `db:push` in production—seeds can overwrite data; push can be destructive.
 4. Restart the Node process so it runs the new `dist/app.js`.
 
 If you see **404 for POST /api/v1/device-token**, the running server is likely using an old build; redeploy with the steps above and restart.
