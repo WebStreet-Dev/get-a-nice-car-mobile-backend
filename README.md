@@ -77,6 +77,17 @@ The API will be available at `http://localhost:3000`
 | `npm run db:seed` | Seed initial data |
 | `npm run db:studio` | Open Prisma Studio |
 
+## Deployment
+
+When deploying a new version (e.g. after adding routes like device-token):
+
+1. Pull the latest code.
+2. Run `npm run build` so `dist/` includes all routes (e.g. `dist/routes/device-token.routes.js`).
+3. If the Prisma schema changed: run `npm run db:migrate:prod` to apply migrations, then `npm run db:generate` (build usually runs generate).
+4. Restart the Node process so it runs the new `dist/app.js`.
+
+If you see **404 for POST /api/v1/device-token**, the running server is likely using an old build; redeploy with the steps above and restart.
+
 ## API Endpoints
 
 ### Authentication (`/api/v1/auth`)
@@ -86,6 +97,9 @@ The API will be available at `http://localhost:3000`
 - `POST /logout` - Logout user
 - `PUT /change-password` - Change password
 - `GET /me` - Get current user
+
+### Device token (`/api/v1/device-token`) – public, no auth
+- `POST /` - Register FCM token for guest devices (broadcast to all app installs)
 
 ### Users (`/api/v1/users`)
 - `GET /me` - Get profile

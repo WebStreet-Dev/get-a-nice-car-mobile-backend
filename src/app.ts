@@ -35,6 +35,7 @@ import salesPersonRoutes from './routes/sales-person.routes.js';
 import locationRoutes from './routes/location.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import deviceTokenRoutes from './routes/device-token.routes.js';
 
 const app = express();
 
@@ -116,6 +117,7 @@ app.use('/uploads', express.static(uploadsPath));
 
 // API routes
 app.use('/api/v1/auth', authLimiter, authRoutes);
+app.use('/api/v1/device-token', deviceTokenRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/appointments', appointmentRoutes);
 app.use('/api/v1/departments', departmentRoutes);

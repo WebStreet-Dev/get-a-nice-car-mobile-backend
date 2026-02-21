@@ -303,6 +303,18 @@ model Location {
   @@index([displayOrder])
 }
 
+// FCM tokens for guest/unauthenticated devices (broadcast to all app installs)
+model DeviceToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String?   @map("user_id") // null = guest device
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("device_tokens")
+  @@index([userId])
+}
+
 
 
 

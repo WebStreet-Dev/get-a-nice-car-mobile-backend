@@ -3,6 +3,7 @@ import prisma from './prisma.service.js';
 import { NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
 import config from '../config/index.js';
+import * as deviceTokenService from './device-token.service.js';
 
 // Firebase Admin SDK (initialize if credentials are provided)
 let firebaseAdmin: typeof import('firebase-admin') | null = null;
@@ -10,11 +11,12 @@ let firebaseAdmin: typeof import('firebase-admin') | null = null;
 async function initializeFirebase() {
   if (config.firebase.projectId && config.firebase.privateKey && config.firebase.clientEmail) {
     try {
-      firebaseAdmin = await import('firebase-admin');
-      
-      if (!firebaseAdmin.apps.length) {
-        firebaseAdmin.initializeApp({
-          credential: firebaseAdmin.credential.cert({
+      const admin = await import('firebase-admin');
+      const adminDefault = admin.default;
+
+      if (!adminDefault.apps.length) {
+        adminDefault.initializeApp({
+          credential: adminDefault.credential.cert({
             projectId: config.firebase.projectId,
             privateKey: config.firebase.privateKey,
             clientEmail: config.firebase.clientEmail,
@@ -22,6 +24,7 @@ async function initializeFirebase() {
         });
         logger.info('Firebase Admin SDK initialized');
       }
+      firebaseAdmin = adminDefault;
     } catch (error) {
       logger.warn('Firebase Admin SDK not initialized', { error });
     }
@@ -223,6 +226,84 @@ export class NotificationService {
   }
 
   /**
+   * Send FCM to a list of tokens in batches (e.g. for guest devices). No Notification rows created.
+   */
+  async sendPushToTokens(
+    tokens: string[],
+    payload: {
+      title: string;
+      body: string;
+      data?: Record<string, unknown>;
+    }
+  ): Promise<{ successCount: number; failureCount: number }> {
+    if (!firebaseAdmin || tokens.length === 0) {
+      return { successCount: 0, failureCount: 0 };
+    }
+
+    const BATCH_SIZE = 500;
+    let successCount = 0;
+    let failureCount = 0;
+
+    const baseMessage = {
+      notification: { title: payload.title, body: payload.body },
+      data: payload.data
+        ? Object.fromEntries(
+            Object.entries(payload.data).map(([k, v]) => [k, String(v)])
+          )
+        : undefined,
+      android: {
+        priority: 'high' as const,
+        notification: {
+          channelId: 'high_importance_channel',
+          sound: 'default',
+          priority: 'high' as const,
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            badge: 1,
+            'content-available': 1,
+          },
+        },
+      },
+    };
+
+    for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+      const batch = tokens.slice(i, i + BATCH_SIZE);
+      try {
+        const response = await firebaseAdmin.messaging().sendEachForMulticast({
+          ...baseMessage,
+          tokens: batch,
+        });
+        successCount += response.successCount;
+        failureCount += response.failureCount;
+        if (response.failureCount > 0) {
+          response.responses.forEach((r, idx) => {
+            if (!r.success && r.error) {
+              logger.debug('FCM send failed for token in batch', {
+                code: r.error.code,
+                message: r.error.message,
+                tokenIndex: idx,
+              });
+            }
+          });
+        }
+      } catch (error) {
+        logger.error('FCM batch send failed', {
+          batchStart: i,
+          batchSize: batch.length,
+          error: error instanceof Error ? error.message : error,
+        });
+        failureCount += batch.length;
+      }
+    }
+
+    return { successCount, failureCount };
+  }
+
+  /**
    * Send push notification to multiple users (admin only)
    */
   async sendBroadcastNotification(
@@ -258,7 +339,8 @@ export class NotificationService {
   }
 
   /**
-   * Send notification to all users (admin only)
+   * Send notification to all users (admin only). Includes logged-in users (Notification row + FCM)
+   * and guest device tokens (FCM only, batched).
    */
   async sendToAllUsers(payload: {
     title: string;
@@ -271,10 +353,30 @@ export class NotificationService {
       select: { id: true },
     });
 
-    return this.sendBroadcastNotification(
+    const userResult = await this.sendBroadcastNotification(
       users.map((u) => u.id),
       payload
     );
+
+    const guestTokens = await deviceTokenService.getGuestDeviceTokens();
+    if (guestTokens.length === 0) {
+      return userResult;
+    }
+
+    const fcmPayload = {
+      title: payload.title,
+      body: payload.body,
+      data: {
+        ...payload.data,
+        type: payload.type,
+      },
+    };
+    const guestResult = await this.sendPushToTokens(guestTokens, fcmPayload);
+
+    return {
+      sent: userResult.sent + guestResult.successCount,
+      failed: userResult.failed + guestResult.failureCount,
+    };
   }
 
   /**
