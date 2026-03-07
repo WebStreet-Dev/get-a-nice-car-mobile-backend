@@ -182,7 +182,7 @@ class EmailService {
       });
 
       const info = await this.transporter.sendMail({
-        from: `"Get a Nice Car" <${config.smtp.from}>`,
+        from: `"Nice Car Inc" <${config.smtp.from}>`,
         to,
         subject,
         html,

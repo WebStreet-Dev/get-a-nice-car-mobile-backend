@@ -412,7 +412,7 @@ export class AuthService {
         await emailService
           .sendEmail(
             user.email,
-            'Reset your password - Get a Nice Car',
+            'Reset your password - Nice Car Inc',
             html,
             text
           )

@@ -170,7 +170,7 @@ class EmailTemplateService {
           <tr>
             <td style="background-color: #f5f5f5; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border-top: 1px solid #e0e0e0;">
               <p style="margin: 0; color: #666666; font-size: 12px;">
-                This is an automated email from Get a Nice Car mobile app.<br>
+                This is an automated email from Nice Car Inc mobile app.<br>
                 Please do not reply to this email.
               </p>
             </td>
@@ -213,7 +213,7 @@ Status: ${appointment.status}
 Appointment ID: ${appointment.id}
 
 ---
-This is an automated email from Get a Nice Car mobile app.
+This is an automated email from Nice Car Inc mobile app.
 Please do not reply to this email.
     `.trim();
 
@@ -398,7 +398,7 @@ Please do not reply to this email.
           <tr>
             <td style="background-color: #ffffff; padding: 24px 30px; text-align: center; border-top: 1px solid #e8ecf0;">
               <p style="margin: 0; color: #a0aec0; font-size: 12px; line-height: 1.5;">
-                Automated notification from <strong style="color: #667eea;">Get a Nice Car</strong> mobile app
+                Automated notification from <strong style="color: #667eea;">Nice Car Inc</strong> mobile app
               </p>
             </td>
           </tr>
@@ -443,7 +443,7 @@ Submitted: ${new Date().toLocaleString('en-US', {
       hour12: true
     })}
 
-Automated notification from Get a Nice Car mobile app
+Automated notification from Nice Car Inc mobile app
     `.trim();
 
     return { html, text };
@@ -463,7 +463,7 @@ Automated notification from Get a Nice Car mobile app
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reset your password - Get a Nice Car</title>
+  <title>Reset your password - Nice Car Inc</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
@@ -478,7 +478,7 @@ Automated notification from Get a Nice Car mobile app
           <tr>
             <td style="padding: 30px;">
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.5;">
-                You requested a password reset. Use the code below in the Get a Nice Car app to set a new password.
+                You requested a password reset. Use the code below in the Nice Car Inc app to set a new password.
               </p>
               <div style="background-color: #f0f4f8; padding: 24px; border-radius: 8px; text-align: center; margin: 24px 0;">
                 <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1976d2;">${this.escapeHtml(code)}</span>
@@ -487,7 +487,7 @@ Automated notification from Get a Nice Car mobile app
                 This code expires in 1 hour. If you did not request a password reset, you can safely ignore this email.
               </p>
               <p style="margin: 0; color: #999999; font-size: 12px;">
-                This is an automated email from Get a Nice Car. Please do not reply.
+                This is an automated email from Nice Car Inc. Please do not reply.
               </p>
             </td>
           </tr>
@@ -500,15 +500,15 @@ Automated notification from Get a Nice Car mobile app
     `.trim();
 
     const text = `
-Reset your password - Get a Nice Car
+Reset your password - Nice Car Inc
 
-You requested a password reset. Use this code in the Get a Nice Car app to set a new password:
+You requested a password reset. Use this code in the Nice Car Inc app to set a new password:
 
   ${code}
 
 This code expires in 1 hour. If you did not request a password reset, you can safely ignore this email.
 
-This is an automated email from Get a Nice Car. Please do not reply.
+This is an automated email from Nice Car Inc. Please do not reply.
     `.trim();
 
     return { html, text };

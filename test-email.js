@@ -44,7 +44,7 @@ transporter.verify((error, success) => {
     // Try sending a test email
     console.log('Sending test email...');
     const mailOptions = {
-      from: `"Get a Nice Car" <${smtpConfig.auth.user}>`,
+      from: `"Nice Car Inc" <${smtpConfig.auth.user}>`,
       to: 'isururaveen4520@gmail.com',
       subject: 'Test Email from GoDaddy SMTP',
       html: `
