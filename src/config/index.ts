@@ -54,6 +54,9 @@ export const config = {
     from: process.env.SMTP_FROM || 'hello@getanicecar.com',
   },
 
+  // Password reset
+  passwordResetExpiryMinutes: parseInt(process.env.PASSWORD_RESET_EXPIRY_MINUTES || '60', 10),
+
   // Admin
   admin: {
     email: process.env.ADMIN_EMAIL || 'admin@getanicecar.com',

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User, Role, AccountStatus, NotificationType, UserType } from '@prisma/client';
@@ -8,6 +9,8 @@ import { AuthTokens, TokenPayload } from '../types/index.js';
 import logger from '../utils/logger.js';
 import adminNotificationService from './admin-notification.service.js';
 import notificationService from './notification.service.js';
+import emailService from './email.service.js';
+import emailTemplateService from './email-template.service.js';
 
 const SALT_ROUNDS = 12;
 
@@ -371,6 +374,105 @@ export class AuthService {
     });
 
     logger.info('Password force changed', { userId });
+  }
+
+  /**
+   * Request password reset: create a 6-digit code, store it, send email.
+   * Always returns success (no user enumeration).
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    // Only send email for approved, active users
+    if (user && user.isActive && user.accountStatus === AccountStatus.APPROVED) {
+      const expiryMinutes = config.passwordResetExpiryMinutes ?? 60;
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + expiryMinutes);
+      const code = String(crypto.randomInt(100000, 1000000));
+
+      await prisma.passwordResetToken.deleteMany({
+        where: { userId: user.id },
+      });
+      await prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          code,
+          expiresAt,
+        },
+      });
+
+      if (emailService.isAvailable()) {
+        const { html, text } = emailTemplateService.generatePasswordResetEmail({
+          code,
+          email: user.email,
+        });
+        await emailService
+          .sendEmail(
+            user.email,
+            'Reset your password - Get a Nice Car',
+            html,
+            text
+          )
+          .catch((err) => {
+            logger.error('Failed to send password reset email', {
+              userId: user.id,
+              email: user.email,
+              error: err,
+            });
+          });
+      } else {
+        logger.warn('Email service not available, password reset code not sent', {
+          userId: user.id,
+          email: user.email,
+        });
+      }
+      logger.info('Password reset requested', { userId: user.id, email: user.email });
+    }
+    // Always return without throwing (no user enumeration)
+  }
+
+  /**
+   * Reset password using email + 6-digit code.
+   */
+  async resetPassword(email: string, code: string, newPassword: string): Promise<void> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      throw new AppError('Invalid or expired code', 400);
+    }
+
+    const now = new Date();
+    const tokenRecord = await prisma.passwordResetToken.findFirst({
+      where: {
+        userId: user.id,
+        code: code.trim(),
+        expiresAt: { gt: now },
+      },
+    });
+
+    if (!tokenRecord) {
+      throw new AppError('Invalid or expired code', 400);
+    }
+
+    const passwordHash = await this.hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+    await prisma.passwordResetToken.deleteMany({
+      where: { userId: user.id },
+    });
+    await prisma.refreshToken.deleteMany({
+      where: { userId: user.id },
+    });
+
+    logger.info('Password reset completed', { userId: user.id });
   }
 
   /**

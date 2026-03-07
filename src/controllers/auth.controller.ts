@@ -5,6 +5,8 @@ import {
   RegisterInput,
   LoginInput,
   RefreshTokenInput,
+  ForgotPasswordInput,
+  ResetPasswordWithCodeInput,
   ChangePasswordInput,
   ForceChangePasswordInput,
 } from '../validators/auth.validator.js';
@@ -91,6 +93,42 @@ export class AuthController {
       await authService.logout(refreshToken);
 
       sendSuccess(res, null, 'Logged out successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Request password reset (sends 6-digit code to email if account exists)
+   * POST /api/v1/auth/forgot-password
+   */
+  async forgotPassword(
+    req: Request<unknown, unknown, ForgotPasswordInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { email } = req.body;
+      await authService.requestPasswordReset(email);
+      sendSuccess(res, null, 'If an account exists with this email, you will receive a code to reset your password.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reset password with email + 6-digit code
+   * POST /api/v1/auth/reset-password
+   */
+  async resetPassword(
+    req: Request<unknown, unknown, ResetPasswordWithCodeInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { email, code, password } = req.body;
+      await authService.resetPassword(email, code, password);
+      sendSuccess(res, null, 'Password reset successfully. You can now sign in.');
     } catch (error) {
       next(error);
     }

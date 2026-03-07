@@ -6,6 +6,8 @@ import {
   registerSchema,
   loginSchema,
   refreshTokenSchema,
+  forgotPasswordSchema,
+  resetPasswordWithCodeSchema,
   changePasswordSchema,
   forceChangePasswordSchema,
 } from '../validators/auth.validator.js';
@@ -54,6 +56,28 @@ router.post(
   '/logout',
   validate(refreshTokenSchema),
   authController.logout.bind(authController)
+);
+
+/**
+ * @route   POST /api/v1/auth/forgot-password
+ * @desc    Request password reset (sends 6-digit code to email)
+ * @access  Public
+ */
+router.post(
+  '/forgot-password',
+  validate(forgotPasswordSchema),
+  authController.forgotPassword.bind(authController)
+);
+
+/**
+ * @route   POST /api/v1/auth/reset-password
+ * @desc    Reset password with email + 6-digit code
+ * @access  Public
+ */
+router.post(
+  '/reset-password',
+  validate(resetPasswordWithCodeSchema),
+  authController.resetPassword.bind(authController)
 );
 
 /**

@@ -56,6 +56,21 @@ export const resetPasswordSchema = z.object({
     .max(100, 'Password must be less than 100 characters'),
 });
 
+export const resetPasswordWithCodeSchema = z.object({
+  email: z
+    .string()
+    .email('Invalid email address')
+    .toLowerCase(),
+  code: z
+    .string()
+    .length(6, 'Code must be 6 digits')
+    .regex(/^\d{6}$/, 'Code must be 6 digits'),
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(100, 'Password must be less than 100 characters'),
+});
+
 export const changePasswordSchema = z.object({
   currentPassword: z
     .string()
@@ -78,6 +93,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ResetPasswordWithCodeInput = z.infer<typeof resetPasswordWithCodeSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type ForceChangePasswordInput = z.infer<typeof forceChangePasswordSchema>;
 

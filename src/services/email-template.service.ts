@@ -450,6 +450,71 @@ Automated notification from Get a Nice Car mobile app
   }
 
   /**
+   * Generate HTML email template for password reset (6-digit code)
+   */
+  generatePasswordResetEmail(data: { code: string; email: string }): {
+    html: string;
+    text: string;
+  } {
+    const { code, email } = data;
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset your password - Get a Nice Car</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
+    <tr>
+      <td style="padding: 20px 0;">
+        <table role="presentation" style="width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background-color: #1976d2; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">Reset your password</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.5;">
+                You requested a password reset. Use the code below in the Get a Nice Car app to set a new password.
+              </p>
+              <div style="background-color: #f0f4f8; padding: 24px; border-radius: 8px; text-align: center; margin: 24px 0;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1976d2;">${this.escapeHtml(code)}</span>
+              </div>
+              <p style="margin: 0 0 12px 0; color: #666666; font-size: 14px;">
+                This code expires in 1 hour. If you did not request a password reset, you can safely ignore this email.
+              </p>
+              <p style="margin: 0; color: #999999; font-size: 12px;">
+                This is an automated email from Get a Nice Car. Please do not reply.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    const text = `
+Reset your password - Get a Nice Car
+
+You requested a password reset. Use this code in the Get a Nice Car app to set a new password:
+
+  ${code}
+
+This code expires in 1 hour. If you did not request a password reset, you can safely ignore this email.
+
+This is an automated email from Get a Nice Car. Please do not reply.
+    `.trim();
+
+    return { html, text };
+  }
+
+  /**
    * Escape HTML special characters to prevent XSS
    */
   private escapeHtml(text: string): string {
