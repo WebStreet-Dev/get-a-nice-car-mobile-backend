@@ -37,6 +37,17 @@ router.post(
 );
 
 /**
+ * @route   GET /api/v1/auth/login
+ * @desc    Return 405 - login requires POST (avoids "route not found" when OPTIONS is proxied as GET or link is opened)
+ */
+router.get('/login', (_req, res) => {
+  res.status(405).json({
+    success: false,
+    error: 'Method not allowed. Use POST to log in.',
+  });
+});
+
+/**
  * @route   POST /api/v1/auth/refresh
  * @desc    Refresh access token
  * @access  Public

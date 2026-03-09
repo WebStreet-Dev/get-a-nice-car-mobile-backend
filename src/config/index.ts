@@ -21,8 +21,8 @@ export const config = {
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '365d',
   },
 
-  // CORS - trim each origin so "url1, url2" works; no trailing slash on origins
-  corsOrigin: (process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean)) || [
+  // CORS - trim and strip trailing slash so "url1, url2" and "http://origin/" both work
+  corsOrigin: (process.env.CORS_ORIGIN?.split(',').map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean)) || [
     'http://localhost:3001',
     'http://localhost:5173',
     'https://admin.nicecarinc.cloud',

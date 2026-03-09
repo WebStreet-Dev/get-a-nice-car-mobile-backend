@@ -105,6 +105,18 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// Explicit OPTIONS handler for API so CORS preflight always succeeds (e.g. when behind Traefik/proxy)
+app.options('/api/v1/*', (req, res) => {
+  const origin = req.headers.origin;
+  if (origin && config.corsOrigin.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.status(204).end();
+});
+
 // Serve admin panel static files (before API routes to avoid conflicts)
 const adminDistPath = path.join(__dirname, '../admin/dist');
 app.use(express.static(adminDistPath));
