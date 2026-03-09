@@ -13,7 +13,7 @@ import type {
   Role,
 } from '../types';
 
-// Use environment variable for API URL, fallback to relative path for same-domain deployment
+// Use environment variable for API URL (build time), or set at runtime via setApiBaseUrl()
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 const api = axios.create({
@@ -22,6 +22,13 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+/** Set API base URL at runtime (e.g. from config.json). Use when VITE_API_URL is not available at build time. */
+export function setApiBaseUrl(url: string): void {
+  if (url && typeof url === 'string') {
+    api.defaults.baseURL = url.replace(/\/+$/, '');
+  }
+}
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -51,7 +58,7 @@ api.interceptors.response.use(
         }
 
         const response = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
-          `${API_URL}/auth/refresh`,
+          `${api.defaults.baseURL || API_URL}/auth/refresh`,
           { refreshToken }
         );
 
