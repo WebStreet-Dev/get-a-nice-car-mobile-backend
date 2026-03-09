@@ -21,8 +21,8 @@ export const config = {
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '365d',
   },
 
-  // CORS
-  corsOrigin: process.env.CORS_ORIGIN?.split(',') || [
+  // CORS - trim each origin so "url1, url2" works; no trailing slash on origins
+  corsOrigin: (process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean)) || [
     'http://localhost:3001',
     'http://localhost:5173',
     'https://admin.nicecarinc.cloud',
